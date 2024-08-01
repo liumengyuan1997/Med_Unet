@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
+import segmentation_models_pytorch as sm
 
 from utils.data_loading import BasicDataset
 from unet import UNet
@@ -16,9 +17,11 @@ def predict_img(net,
                 full_img,
                 device,
                 scale_factor=1,
+                # imgW=256, imgH=256,
                 out_threshold=0.5):
     net.eval()
     img = torch.from_numpy(BasicDataset.preprocess(None, full_img, scale_factor, is_mask=False))
+    # img = torch.from_numpy(BasicDataset.preprocess(None, full_img, imgW, imgH, is_mask=False))
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
@@ -44,8 +47,10 @@ def get_args():
     parser.add_argument('--no-save', '-n', action='store_true', help='Do not save the output masks')
     parser.add_argument('--mask-threshold', '-t', type=float, default=0.5,
                         help='Minimum probability value to consider a mask pixel white')
-    parser.add_argument('--scale', '-s', type=float, default=0.5,
+    parser.add_argument('--scale', '-s', type=float, default=1.0,
                         help='Scale factor for the input images')
+    parser.add_argument('--imgW', '-iw', type=int, default=256)
+    parser.add_argument('--imgH', '-ih', type=int, default=256)
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     
@@ -83,7 +88,13 @@ if __name__ == '__main__':
     in_files = args.input
     out_files = get_output_filenames(args)
 
-    net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    # net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    net = sm.Unet('resnet34', 
+                  encoder_weights='imagenet', 
+                  classes=args.classes)
+    net.n_channels = 3
+    net.n_classes = args.classes
+    net.bilinear = args.bilinear
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Loading model {args.model}')
@@ -103,6 +114,8 @@ if __name__ == '__main__':
         mask = predict_img(net=net,
                            full_img=img,
                            scale_factor=args.scale,
+                        #    imgW=args.imgW,
+                        #    imgH=args.imgH,
                            out_threshold=args.mask_threshold,
                            device=device)
 

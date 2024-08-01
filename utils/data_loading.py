@@ -11,6 +11,8 @@ from os.path import splitext, isfile, join
 from pathlib import Path
 from torch.utils.data import Dataset
 from tqdm import tqdm
+import torch.nn.functional as F
+import os
 
 
 def load_image(filename):
@@ -36,14 +38,29 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
 
 
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str = ''):
+    def __init__(self, images_dir: str, mask_dir: str, scale: float = 1.0, interval: int=1, mask_suffix: str = ''):
+    # def __init__(self, images_dir: str, mask_dir: str, newW: int=256, newH: int=256, interval: int=1, mask_suffix: str = ''):
         self.images_dir = Path(images_dir)
         self.mask_dir = Path(mask_dir)
-        assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
+        # self.newW = newW
+        # self.newH = newH
         self.mask_suffix = mask_suffix
 
-        self.ids = [splitext(file)[0] for file in listdir(images_dir) if isfile(join(images_dir, file)) and not file.startswith('.')]
+        # take one out of every ten
+        self.ids = []
+        files = os.listdir(images_dir)
+        for i in range(len(files)):
+            file = files[i]
+            # Full path to the file
+            file_path = os.path.join(images_dir, file)
+            
+            # Check if it's a valid file and meets the conditions
+            if os.path.isfile(file_path) and not file.startswith('.'):
+                if i % interval == 0:
+                    self.ids.append(os.path.splitext(file)[0])
+
+        # self.ids = [splitext(file)[0] for file in listdir(images_dir) if isfile(join(images_dir, file)) and not file.startswith('.')]
         if not self.ids:
             raise RuntimeError(f'No input file found in {images_dir}, make sure you put your images there')
 
@@ -63,11 +80,21 @@ class BasicDataset(Dataset):
 
     @staticmethod
     def preprocess(mask_values, pil_img, scale, is_mask):
+    # def preprocess(mask_values, pil_img, newW, newH, is_mask):
         w, h = pil_img.size
+        # print("original width: " + str(w) + "orginal height: " + str(h))
         newW, newH = int(scale * w), int(scale * h)
-        assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
         pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
         img = np.asarray(pil_img)
+
+        # Compute padding to make dimensions divisible by 32
+        pad_w = (32 - newW % 32) % 32
+        pad_h = (32 - newH % 32) % 32
+        pad_left = pad_w // 2
+        pad_right = pad_w - pad_left
+        pad_top = pad_h // 2
+        pad_bottom = pad_h - pad_top
+        padding = (pad_left, pad_right, pad_top, pad_bottom)
 
         if is_mask:
             mask = np.zeros((newH, newW), dtype=np.int64)
@@ -76,8 +103,11 @@ class BasicDataset(Dataset):
                     mask[img == v] = i
                 else:
                     mask[(img == v).all(-1)] = i
+            
+            mask = torch.from_numpy(mask)
+            mask = F.pad(mask, padding, mode='constant', value=0)
 
-            return mask
+            return mask.numpy()
 
         else:
             if img.ndim == 2:
@@ -87,8 +117,10 @@ class BasicDataset(Dataset):
 
             if (img > 1).any():
                 img = img / 255.0
+            img = torch.from_numpy(img).float()
+            img = F.pad(img, padding, mode='constant', value=0)
 
-            return img
+            return img.numpy()
 
     def __getitem__(self, idx):
         name = self.ids[idx]
@@ -105,12 +137,13 @@ class BasicDataset(Dataset):
 
         img = self.preprocess(self.mask_values, img, self.scale, is_mask=False)
         mask = self.preprocess(self.mask_values, mask, self.scale, is_mask=True)
+        # img = self.preprocess(self.mask_values, img, self.newW, self.newH, is_mask=False)
+        # mask = self.preprocess(self.mask_values, mask, self.newW, self.newH, is_mask=True)
 
         return {
             'image': torch.as_tensor(img.copy()).float().contiguous(),
             'mask': torch.as_tensor(mask.copy()).long().contiguous()
-        }
-
+        }    
 
 class CarvanaDataset(BasicDataset):
     def __init__(self, images_dir, mask_dir, scale=1):

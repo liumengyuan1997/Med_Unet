@@ -11,38 +11,43 @@ import torchvision.transforms.functional as TF
 from pathlib import Path
 from torch import optim
 from torch.utils.data import DataLoader, random_split
+import segmentation_models_pytorch as sm
 from tqdm import tqdm
 
 import wandb
 from evaluate import evaluate
-from unet import UNet
-from utils.data_loading import BasicDataset, CarvanaDataset
+# from unet import UNet
+from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
 
-dir_img = Path('./data/imgs/')
-dir_mask = Path('./data/masks/')
+dir_img = Path('./data/original/imgs/coronal')
+dir_mask = Path('./data/original/masks/coronal')
 dir_checkpoint = Path('./checkpoints/')
 
 
 def train_model(
         model,
         device,
-        epochs: int = 5,
+        epochs: int = 15,
         batch_size: int = 1,
         learning_rate: float = 1e-5,
         val_percent: float = 0.1,
         save_checkpoint: bool = True,
-        img_scale: float = 0.5,
+        img_scale: float = 1.0,
+        # imgW: int = 256,
+        # imgH: int = 256,
+        interval: int = 1,
         amp: bool = False,
         weight_decay: float = 1e-8,
         momentum: float = 0.999,
         gradient_clipping: float = 1.0,
 ):
     # 1. Create dataset
-    try:
-        dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
-    except (AssertionError, RuntimeError, IndexError):
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+    # try:
+    #     dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
+    # except (AssertionError, RuntimeError, IndexError):
+    dataset = BasicDataset(dir_img, dir_mask, img_scale)
+    # dataset = BasicDataset(dir_img, dir_mask, imgW, imgH, interval)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -58,7 +63,8 @@ def train_model(
     experiment = wandb.init(project='U-Net', resume='allow', anonymous='must')
     experiment.config.update(
         dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-             val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale, amp=amp)
+            val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale, amp=amp)
+            # val_percent=val_percent, save_checkpoint=save_checkpoint, imgW=imgW, imgH=imgH, amp=amp)
     )
 
     logging.info(f'''Starting training:
@@ -74,11 +80,18 @@ def train_model(
     ''')
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
-    optimizer = optim.RMSprop(model.parameters(),
-                              lr=learning_rate, weight_decay=weight_decay, momentum=momentum, foreach=True)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    # optimizer = optim.RMSprop(model.parameters(),
+    #                           lr=learning_rate, 
+    #                           weight_decay=weight_decay,
+    #                           momentum=momentum, 
+    #                           foreach=True)
+
+    # goal: maximize Dice score
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
-    criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = sm.losses.FocalLoss('multiclass')
     global_step = 0
 
     # 5. Begin training
@@ -143,21 +156,21 @@ def train_model(
                         scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
-                        try:
-                            experiment.log({
-                                'learning rate': optimizer.param_groups[0]['lr'],
-                                'validation Dice': val_score,
-                                'images': wandb.Image(images[0].cpu()),
-                                'masks': {
-                                    'true': wandb.Image(true_masks[0].float().cpu()),
-                                    'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                                },
-                                'step': global_step,
-                                'epoch': epoch,
-                                **histograms
-                            })
-                        except:
-                            pass
+                        # try:
+                        #     experiment.log({
+                        #         'learning rate': optimizer.param_groups[0]['lr'],
+                        #         'validation Dice': val_score,
+                        #         'images': wandb.Image(images[0].cpu()),
+                        #         'masks': {
+                        #             'true': wandb.Image(true_masks[0].float().cpu()),
+                        #             'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
+                        #         },
+                        #         'step': global_step,
+                        #         'epoch': epoch,
+                        #         **histograms
+                        #     })
+                        # except:
+                        #     pass
 
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
@@ -169,12 +182,15 @@ def train_model(
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=5, help='Number of epochs')
+    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=15, help='Number of epochs')
     parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
-    parser.add_argument('--scale', '-s', type=float, default=0.5, help='Downscaling factor of the images')
+    parser.add_argument('--scale', '-s', type=float, default=1, help='Downscaling factor of the images')
+    # parser.add_argument('--imgW', '-iw', type=int, default=256)
+    # parser.add_argument('--imgH', '-ih', type=int, default=256)
+    parser.add_argument('--interval', '-itv', type=int, default=1)
     parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
                         help='Percent of the data that is used as validation (0-100)')
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
@@ -194,7 +210,15 @@ if __name__ == '__main__':
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
-    model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    # model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    model = sm.Unet('resnet34',
+                    encoder_weights='imagenet', 
+                    classes=args.classes,
+                    activation='softmax')
+    model.n_channels = 3
+    model.n_classes = args.classes
+    model.bilinear = args.bilinear
+
     model = model.to(memory_format=torch.channels_last)
 
     logging.info(f'Network:\n'
