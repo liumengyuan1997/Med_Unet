@@ -11,17 +11,24 @@ import segmentation_models_pytorch as sm
 
 from utils.data_loading import BasicDataset
 from unet import UNet
-from utils.utils import plot_img_and_mask
+from utils.utils import plot_img_and_mask, get_training_params
 
 def predict_img(net,
                 full_img,
                 device,
-                scale_factor=1,
-                # imgW=256, imgH=256,
+                img_scale=None,
+                imgW=None,
+                imgH=None,
                 out_threshold=0.5):
     net.eval()
-    img = torch.from_numpy(BasicDataset.preprocess(None, full_img, scale_factor, is_mask=False))
-    # img = torch.from_numpy(BasicDataset.preprocess(None, full_img, imgW, imgH, is_mask=False))
+    img_info = f"Images scaling:  {img_scale}" if img_scale else f"Image dimensions: Width={imgW}, Height={imgH}"
+    logging.info({img_info})
+    img = torch.from_numpy(BasicDataset.preprocess(mask_values = None,
+                                                   pil_img = full_img,
+                                                   is_mask=False,
+                                                   scale = img_scale if img_scale else None,
+                                                   newW = imgW if imgW else None,
+                                                   newH = imgH if imgH else None))
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
@@ -47,10 +54,16 @@ def get_args():
     parser.add_argument('--no-save', '-n', action='store_true', help='Do not save the output masks')
     parser.add_argument('--mask-threshold', '-t', type=float, default=0.5,
                         help='Minimum probability value to consider a mask pixel white')
-    parser.add_argument('--scale', '-s', type=float, default=1.0,
-                        help='Scale factor for the input images')
-    parser.add_argument('--imgW', '-iw', type=int, default=256)
-    parser.add_argument('--imgH', '-ih', type=int, default=256)
+    # scale and img size options
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--scale', '-s', type=float, help='Downscaling factor of the images')
+    group.add_argument('--size', '-sz', nargs=2, type=int, metavar=('WIDTH', 'HEIGHT'), help='Width and Height of the images')
+
+    # old version
+    # parser.add_argument('--scale', '-s', type=float, default=1.0,
+    #                     help='Scale factor for the input images')
+    # parser.add_argument('--imgW', '-iw', type=int, default=256)
+    # parser.add_argument('--imgH', '-ih', type=int, default=256)
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     
@@ -88,6 +101,7 @@ if __name__ == '__main__':
     in_files = args.input
     out_files = get_output_filenames(args)
 
+    # none resnet34 version:
     # net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     net = sm.Unet('resnet34', 
                   encoder_weights='imagenet', 
@@ -107,15 +121,15 @@ if __name__ == '__main__':
 
     logging.info('Model loaded!')
 
+    predict_params = get_training_params(args)
+
     for i, filename in enumerate(in_files):
         logging.info(f'Predicting image {filename} ...')
         img = Image.open(filename)
 
         mask = predict_img(net=net,
                            full_img=img,
-                           scale_factor=args.scale,
-                        #    imgW=args.imgW,
-                        #    imgH=args.imgH,
+                           **predict_params,
                            out_threshold=args.mask_threshold,
                            device=device)
 

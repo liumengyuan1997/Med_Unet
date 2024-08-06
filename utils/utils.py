@@ -11,3 +11,20 @@ def plot_img_and_mask(img, mask):
         ax[i + 1].imshow(mask == i)
     plt.xticks([]), plt.yticks([])
     plt.show()
+
+def get_training_params(args):
+    if args.scale:
+        return {
+            'img_scale': args.scale
+        }
+    elif args.size:
+        return {
+            'imgW': args.size[0],
+            'imgH': args.size[1]
+        }
+    else:
+        # Default image dimensions
+        return {
+            'imgW': 256,
+            'imgH': 256
+        }

@@ -38,16 +38,15 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
 
 
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, mask_dir: str, scale: float = 1.0, interval: int=1, mask_suffix: str = ''):
-    # def __init__(self, images_dir: str, mask_dir: str, newW: int=256, newH: int=256, interval: int=1, mask_suffix: str = ''):
+    def __init__(self, images_dir: str, mask_dir: str, scale: float=None, newW: int=None, newH: int=None, interval: int=1, mask_suffix: str = ''):
         self.images_dir = Path(images_dir)
         self.mask_dir = Path(mask_dir)
         self.scale = scale
-        # self.newW = newW
-        # self.newH = newH
+        self.newW = newW
+        self.newH = newH
         self.mask_suffix = mask_suffix
 
-        # take one out of every ten
+        # deal with skipping steps
         self.ids = []
         files = os.listdir(images_dir)
         for i in range(len(files)):
@@ -60,7 +59,6 @@ class BasicDataset(Dataset):
                 if i % interval == 0:
                     self.ids.append(os.path.splitext(file)[0])
 
-        # self.ids = [splitext(file)[0] for file in listdir(images_dir) if isfile(join(images_dir, file)) and not file.startswith('.')]
         if not self.ids:
             raise RuntimeError(f'No input file found in {images_dir}, make sure you put your images there')
 
@@ -79,11 +77,12 @@ class BasicDataset(Dataset):
         return len(self.ids)
 
     @staticmethod
-    def preprocess(mask_values, pil_img, scale, is_mask):
-    # def preprocess(mask_values, pil_img, newW, newH, is_mask):
+    def preprocess(mask_values, pil_img, is_mask, scale: float=None, newW: int=None, newH: int=None):
         w, h = pil_img.size
-        # print("original width: " + str(w) + "orginal height: " + str(h))
-        newW, newH = int(scale * w), int(scale * h)
+        if scale:
+            newW, newH = int(scale * w), int(scale * h)
+        elif not newW or not newH:
+            raise ValueError("Either scale or both newW and newH must be provided.")
         pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
         img = np.asarray(pil_img)
 
@@ -135,10 +134,14 @@ class BasicDataset(Dataset):
         assert img.size == mask.size, \
             f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
 
-        img = self.preprocess(self.mask_values, img, self.scale, is_mask=False)
-        mask = self.preprocess(self.mask_values, mask, self.scale, is_mask=True)
-        # img = self.preprocess(self.mask_values, img, self.newW, self.newH, is_mask=False)
-        # mask = self.preprocess(self.mask_values, mask, self.newW, self.newH, is_mask=True)
+        img = self.preprocess(mask_values=self.mask_values, pil_img = img, is_mask=False, 
+                              scale = self.scale if self.scale else None,
+                              newW = self.newW if self.newW else None,
+                              newH = self.newH if self.newH else None)
+        mask = self.preprocess(mask_values=self.mask_values, pil_img=mask, is_mask=True, 
+                              scale = self.scale if self.scale else None,
+                              newW = self.newW if self.newW else None,
+                              newH = self.newH if self.newH else None)
 
         return {
             'image': torch.as_tensor(img.copy()).float().contiguous(),

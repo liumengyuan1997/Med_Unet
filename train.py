@@ -16,9 +16,9 @@ from tqdm import tqdm
 
 import wandb
 from evaluate import evaluate
-# from unet import UNet
 from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
+from utils.utils import get_training_params
 
 dir_img = Path('./data/original/imgs/coronal')
 dir_mask = Path('./data/original/masks/coronal')
@@ -33,9 +33,9 @@ def train_model(
         learning_rate: float = 1e-5,
         val_percent: float = 0.1,
         save_checkpoint: bool = True,
-        img_scale: float = 1.0,
-        # imgW: int = 256,
-        # imgH: int = 256,
+        img_scale: float = None,
+        imgW: int = None,
+        imgH: int = None,
         interval: int = 1,
         amp: bool = False,
         weight_decay: float = 1e-8,
@@ -46,8 +46,14 @@ def train_model(
     # try:
     #     dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
     # except (AssertionError, RuntimeError, IndexError):
-    dataset = BasicDataset(dir_img, dir_mask, img_scale)
-    # dataset = BasicDataset(dir_img, dir_mask, imgW, imgH, interval)
+    dataset = BasicDataset(
+        images_dir=dir_img,
+        mask_dir=dir_mask,
+        scale=img_scale if img_scale else None,
+        newW=imgW if imgW else None,
+        newH=imgH if imgH else None,
+        interval=interval if interval else 1  # default interval
+    )
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -61,12 +67,19 @@ def train_model(
 
     # (Initialize logging)
     experiment = wandb.init(project='U-Net', resume='allow', anonymous='must')
-    experiment.config.update(
-        dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-            val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale, amp=amp)
-            # val_percent=val_percent, save_checkpoint=save_checkpoint, imgW=imgW, imgH=imgH, amp=amp)
-    )
-
+    if img_scale:
+        experiment.config.update(
+            dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
+                val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale, amp=amp)
+        )
+    else:
+        experiment.config.update(
+            dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
+                val_percent=val_percent, save_checkpoint=save_checkpoint, imgW=imgW, imgH=imgH, amp=amp)
+        )
+    
+    # logging info
+    img_info = f"Images scaling:  {img_scale}" if img_scale is not None else f"Image dimensions: Width={imgW}, Height={imgH}"
     logging.info(f'''Starting training:
         Epochs:          {epochs}
         Batch size:      {batch_size}
@@ -75,7 +88,7 @@ def train_model(
         Validation size: {n_val}
         Checkpoints:     {save_checkpoint}
         Device:          {device.type}
-        Images scaling:  {img_scale}
+        {img_info}
         Mixed Precision: {amp}
     ''')
 
@@ -187,7 +200,14 @@ def get_args():
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
-    parser.add_argument('--scale', '-s', type=float, default=1, help='Downscaling factor of the images')
+
+    # scale and img size options
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--scale', '-s', type=float, help='Downscaling factor of the images')
+    group.add_argument('--size', '-sz', nargs=2, type=int, metavar=('WIDTH', 'HEIGHT'), help='Width and Height of the images')
+    
+    # old version of scale and img size options
+    # parser.add_argument('--scale', '-s', type=float, default=1, help='Downscaling factor of the images')
     # parser.add_argument('--imgW', '-iw', type=int, default=256)
     # parser.add_argument('--imgH', '-ih', type=int, default=256)
     parser.add_argument('--interval', '-itv', type=int, default=1)
@@ -234,15 +254,17 @@ if __name__ == '__main__':
 
     model.to(device=device)
     try:
+        # Get training parameters
+        train_params = get_training_params(args)
         train_model(
             model=model,
             epochs=args.epochs,
             batch_size=args.batch_size,
             learning_rate=args.lr,
             device=device,
-            img_scale=args.scale,
             val_percent=args.val / 100,
-            amp=args.amp
+            amp=args.amp,
+            **train_params  # Unpack the parameters
         )
     except torch.cuda.OutOfMemoryError:
         logging.error('Detected OutOfMemoryError! '
@@ -250,13 +272,16 @@ if __name__ == '__main__':
                       'Consider enabling AMP (--amp) for fast and memory efficient training')
         torch.cuda.empty_cache()
         model.use_checkpointing()
+
+        # Get training parameters
+        train_params = get_training_params(args)
         train_model(
             model=model,
             epochs=args.epochs,
             batch_size=args.batch_size,
             learning_rate=args.lr,
             device=device,
-            img_scale=args.scale,
             val_percent=args.val / 100,
-            amp=args.amp
+            amp=args.amp,
+            **train_params  # Unpack the parameters
         )
