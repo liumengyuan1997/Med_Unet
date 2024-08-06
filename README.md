@@ -33,13 +33,14 @@ optional arguments:
   --load LOAD, -f LOAD  Load model from a .pth file
   --scale SCALE, -s SCALE
                         Downscaling factor of the images
+  --size, -sz SIZE      Width and Height of the images
   --interval INTERVAL   Set training skipping steps
   --validation VAL, -v VAL
                         Percent of the data that is used as validation (0-100)
   --amp                 Use mixed precision
 ```
 
-By default, the `scale` is 1, this is for better results. If you want to use less memory, you can set it to 0.5.
+By default, the image resizing(preprocessing) option is `size` is [256, 256], which is width and height. You can change it to different size as you wish. If you want to change the option to scale, you can add `--scale` (1.0 is the max, which can give better results. If you want to use less memory, you can set it to 0.5.)
 
 Automatic mixed precision is also available with the `--amp` flag. [Mixed precision](https://arxiv.org/abs/1710.03740) allows the model to use less memory and to be faster on recent GPUs by using FP16 arithmetic. Enabling AMP is recommended.
 
@@ -60,6 +61,7 @@ To predict a multiple images and show them without saving them:
 usage: predict.py [-h] [--model FILE] --input INPUT [INPUT ...] 
                   [--output INPUT [INPUT ...]] [--viz] [--no-save]
                   [--mask-threshold MASK_THRESHOLD] [--scale SCALE]
+                  [--size SIZE]
 
 Predict masks from input images
 
@@ -77,7 +79,10 @@ optional arguments:
                         Minimum probability value to consider a mask pixel white
   --scale SCALE, -s SCALE
                         Scale factor for the input images
+  --size SIZE, -sz SIZE Width and Height of the images
 ```
 You can specify which model file to use with `--model MODEL.pth`.
+
+Same as training, by default, the image resizing(preprocessing) option is `size` is [256, 256], which is width and height. You can change it to different size as you wish. If you want to change the option to scale, you can add `--scale` (1.0 is the max, which can give better results. If you want to use less memory, you can set it to 0.5.)
 
 **Note : Don't forget to change the directory path in train.py based on how you stored the figures. Those lines are on 23-25**
