@@ -168,7 +168,7 @@ def train_model(
                         val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
 
-                        logging.info('Validation Dice score: {}'.format(val_score))
+                        logging.info('Validation IoU score: {}'.format(val_score))
                         # try:
                         #     experiment.log({
                         #         'learning rate': optimizer.param_groups[0]['lr'],
