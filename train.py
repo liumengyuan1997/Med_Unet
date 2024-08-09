@@ -46,13 +46,22 @@ def train_model(
     # try:
     #     dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
     # except (AssertionError, RuntimeError, IndexError):
+    # Define transformations for data augmentation
+    transform = transforms.Compose([
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.RandomRotation(90),
+        transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(256)
+    ])
+
     dataset = BasicDataset(
         images_dir=dir_img,
         mask_dir=dir_mask,
         scale=img_scale if img_scale else None,
         newW=imgW if imgW else None,
         newH=imgH if imgH else None,
-        interval=interval if interval else 1  # default interval
+        interval=interval if interval else 1,  # default interval
+        transform=transform
     )
 
     # 2. Split into train / validation partitions
