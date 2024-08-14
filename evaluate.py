@@ -12,6 +12,7 @@ def evaluate(net, dataloader, device, amp):
     dice_score = 0
     iou_score = 0
     fbeta_score = 0
+    accuracy_score = 0
 
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
@@ -46,8 +47,14 @@ def evaluate(net, dataloader, device, amp):
                 fbeta_score += sm.metrics.fbeta_score(tp, fp, fn, tn, beta=0.5, reduction="micro")
                 iou_score += sm.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
 
+                # Calculate the accuracy
+                correct = (mask_pred[:, 1:] == mask_true[:, 1:]).float().sum()
+                total_correct += correct.item()
+                total_samples += mask_true.numel()
+                accuracy_score += total_correct / total_samples
+
     net.train()
 
     # return iou_score / max(num_val_batches, 1)
     # fbeta_score / max(num_val_batches, 1)
-    return iou_score / max(num_val_batches, 1)
+    return accuracy_score / max(num_val_batches, 1)

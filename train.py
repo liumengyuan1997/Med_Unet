@@ -103,8 +103,8 @@ def train_model(
     # goal: maximize Dice score
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
-    # criterion = nn.CrossEntropyLoss()
-    criterion = sm.losses.FocalLoss('multiclass')
+    criterion = nn.CrossEntropyLoss()
+    # criterion = sm.losses.FocalLoss('multiclass')
     global_step = 0
 
     # 5. Begin training
