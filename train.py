@@ -198,7 +198,7 @@ def train_model(
                         epoch_val_loss += val_loss
                         scheduler.step(val_score)
 
-                        logging.info('Validation IoU score: {}'.format(val_score))
+                        logging.info('Validation Dice score: {}'.format(val_score))
 
         train_losses.append(epoch_loss)
         val_losses.append(val_loss)

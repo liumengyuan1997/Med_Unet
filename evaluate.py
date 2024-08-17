@@ -16,21 +16,18 @@ def evaluate(net, dataloader, device, amp):
     net.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
-    iou_score = 0
-    fbeta_score = 0
+    # iou_score = 0
+    # fbeta_score = 0
     val_loss = 0
-    accuracy_score = 0
 
     # criterion = nn.CrossEntropyLoss()
     criterion = sm.losses.FocalLoss('multiclass')
-    # criterion = ABL()
     # criterion = monai.losses.HausdorffDTLoss(reduction='none')
+    # criterion = ABL()
 
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
         for batch in tqdm(dataloader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
-            total_correct = 0
-            total_samples = 0
             image, mask_true = batch['image'], batch['mask']
 
             # move images and labels to correct device and type
@@ -49,21 +46,13 @@ def evaluate(net, dataloader, device, amp):
             else:
                 assert mask_true.min() >= 0 and mask_true.max() < net.n_classes, 'True mask indices should be in [0, n_classes['
                 # calculate validation loss
-                # loss = 0.5 * criterion(mask_pred, mask_true.unsqueeze(1), bound)
-                # loss = dice_loss(
-                #     F.softmax(mask_pred, dim=1).float(),
-                #     F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
-                #     multiclass=True
-                # )
-                # val_loss += loss.item()
-                # mask_tmp = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
-                # loss = criterion(mask_pred[:,1:,:,:], mask_tmp[:,1:,:,:])
-                # loss += dice_loss(
-                #     F.softmax(mask_pred, dim=1).float(),
-                #     F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
-                #     multiclass=True
-                # )
-                # val_loss += loss.item()
+                loss = criterion(mask_pred, mask_true)
+                loss += dice_loss(
+                    F.softmax(mask_pred, dim=1).float(),
+                    F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
+                    multiclass=True
+                )
+                val_loss += loss.item()
 
                 # # BD + Dice
                 # loss = 0.01*criterion(mask_pred, mask_true)
@@ -78,6 +67,7 @@ def evaluate(net, dataloader, device, amp):
                 # mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2).float()
                 mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2)
                 mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2)
+
                 # compute the Dice score, ignoring background
                 dice_score += multiclass_dice_coeff(mask_pred[:, 1:], mask_true[:, 1:], reduce_batch_first=False)
                 
