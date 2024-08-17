@@ -50,4 +50,4 @@ def evaluate(net, dataloader, device, amp):
 
     # return iou_score / max(num_val_batches, 1)
     # fbeta_score / max(num_val_batches, 1)
-    return iou_score / max(num_val_batches, 1)
+    return dice_score / max(num_val_batches, 1)
