@@ -193,8 +193,8 @@ def get_args():
     
     # old version of scale and img size options
     # parser.add_argument('--scale', '-s', type=float, default=1, help='Downscaling factor of the images')
-    # parser.add_argument('--imgW', '-iw', type=int, default=256)
-    # parser.add_argument('--imgH', '-ih', type=int, default=256)
+    # parser.add_argument('--imgW', '-iw', type=int, default=224)
+    # parser.add_argument('--imgH', '-ih', type=int, default=224)
     parser.add_argument('--interval', '-itv', type=int, default=1)
     parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
                         help='Percent of the data that is used as validation (0-100)')

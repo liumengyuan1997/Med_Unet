@@ -25,6 +25,6 @@ def get_training_params(args):
     else:
         # Default image dimensions
         return {
-            'imgW': 256,
-            'imgH': 256
+            'imgW': 224,
+            'imgH': 224
         }
