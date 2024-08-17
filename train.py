@@ -168,7 +168,7 @@ def train_model(
                         val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
 
-                        logging.info('Validation IoU score: {}'.format(val_score))
+                        logging.info('Validation Dice score: {}'.format(val_score))
 
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
