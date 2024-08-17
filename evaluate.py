@@ -10,8 +10,8 @@ def evaluate(net, dataloader, device, amp):
     net.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
-    iou_score = 0
-    fbeta_score = 0
+    # iou_score = 0
+    # fbeta_score = 0
 
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
@@ -41,13 +41,13 @@ def evaluate(net, dataloader, device, amp):
 
                 # compute the Dice score, ignoring background
                 dice_score += multiclass_dice_coeff(mask_pred[:, 1:], mask_true[:, 1:], reduce_batch_first=False)
-                # compute fbeta_score and iou_score
-                tp, fp, fn, tn = sm.metrics.get_stats(mask_pred[:, 1:], mask_true[:, 1:], mode='multilabel', threshold=0.5)
-                fbeta_score += sm.metrics.fbeta_score(tp, fp, fn, tn, beta=0.5, reduction="micro")
-                iou_score += sm.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
+
+                # # compute fbeta_score and iou_score
+                # tp, fp, fn, tn = sm.metrics.get_stats(mask_pred[:, 1:], mask_true[:, 1:], mode='multilabel', threshold=0.5)
+                # fbeta_score += sm.metrics.fbeta_score(tp, fp, fn, tn, beta=0.5, reduction="micro")
+                # iou_score += sm.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
 
     net.train()
 
-    # return iou_score / max(num_val_batches, 1)
-    # fbeta_score / max(num_val_batches, 1)
-    return iou_score / max(num_val_batches, 1)
+
+    return dice_score / max(num_val_batches, 1)
