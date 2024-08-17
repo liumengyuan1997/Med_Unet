@@ -169,21 +169,6 @@ def train_model(
                         scheduler.step(val_score)
 
                         logging.info('Validation IoU score: {}'.format(val_score))
-                        # try:
-                        #     experiment.log({
-                        #         'learning rate': optimizer.param_groups[0]['lr'],
-                        #         'validation Dice': val_score,
-                        #         'images': wandb.Image(images[0].cpu()),
-                        #         'masks': {
-                        #             'true': wandb.Image(true_masks[0].float().cpu()),
-                        #             'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                        #         },
-                        #         'step': global_step,
-                        #         'epoch': epoch,
-                        #         **histograms
-                        #     })
-                        # except:
-                        #     pass
 
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
@@ -231,7 +216,7 @@ if __name__ == '__main__':
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
     # model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-    model = sm.Unet('resnet34',
+    model = sm.Unet('resnet50',
                     encoder_weights='imagenet', 
                     classes=args.classes,
                     activation='softmax')

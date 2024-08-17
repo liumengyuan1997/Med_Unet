@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     # none resnet34 version:
     # net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-    net = sm.Unet('resnet34', 
+    net = sm.Unet('resnet50', 
                   encoder_weights='imagenet', 
                   classes=args.classes)
     net.n_channels = 3
