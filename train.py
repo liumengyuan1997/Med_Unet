@@ -12,16 +12,21 @@ from pathlib import Path
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 import segmentation_models_pytorch as sm
+import monai
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import wandb
 from evaluate import evaluate
 from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
-from utils.utils import get_training_params
+from utils.utils import get_training_params, compute_distance_map
+from utils.hausdorff import HausdorffDTLoss
+from utils.boundary_loss import ABL
 
-dir_img = Path('./data/original/imgs/coronal')
-dir_mask = Path('./data/original/masks/coronal')
+
+dir_img = Path('./data/original/imgs/axial')
+dir_mask = Path('./data/original/masks/axial')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -30,7 +35,8 @@ def train_model(
         device,
         epochs: int = 15,
         batch_size: int = 1,
-        learning_rate: float = 1e-5,
+        # learning_rate: float = 1e-5,
+        learning_rate: float = 1e-6,
         val_percent: float = 0.1,
         save_checkpoint: bool = True,
         img_scale: float = None,
@@ -100,17 +106,23 @@ def train_model(
     #                           momentum=momentum, 
     #                           foreach=True)
 
-    # goal: maximize Dice score
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
-    criterion = nn.CrossEntropyLoss()
-    # criterion = sm.losses.FocalLoss('multiclass')
+
+    # criterion = nn.CrossEntropyLoss()
+    criterion = sm.losses.FocalLoss('multiclass')
+    # criterion = monai.losses.HausdorffDTLoss(reduction='none')
+    # criterion = ABL()
+
     global_step = 0
+    train_losses = []
+    val_losses = []
 
     # 5. Begin training
     for epoch in range(1, epochs + 1):
         model.train()
         epoch_loss = 0
+        epoch_val_loss = 0
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images, true_masks = batch['image'], batch['mask']
@@ -129,12 +141,29 @@ def train_model(
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                     else:
+                        # # HD + Dice
+                        # loss = criterion(masks_pred, F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float())
+                        # loss += dice_loss(
+                        #     F.softmax(masks_pred, dim=1).float(),
+                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
+                        #     multiclass=True
+                        # )
+
+                        # Focal + Dice (!Dim)
                         loss = criterion(masks_pred, true_masks)
                         loss += dice_loss(
                             F.softmax(masks_pred, dim=1).float(),
                             F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                             multiclass=True
                         )
+
+                        # # BD + Dice
+                        # loss = 0.01*criterion(masks_pred, true_masks)
+                        # loss += dice_loss(
+                        #     F.softmax(masks_pred, dim=1).float(),
+                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
+                        #     multiclass=True
+                        # )
 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -145,7 +174,7 @@ def train_model(
 
                 pbar.update(images.shape[0])
                 global_step += 1
-                epoch_loss += loss.item()
+                epoch_loss += loss.item()/len(train_loader)
                 experiment.log({
                     'train loss': loss.item(),
                     'step': global_step,
@@ -165,38 +194,37 @@ def train_model(
                             if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        val_score = evaluate(model, val_loader, device, amp)
+                        val_loss, val_score = evaluate(model, val_loader, device, amp)
+                        epoch_val_loss += val_loss
                         scheduler.step(val_score)
 
                         logging.info('Validation IoU score: {}'.format(val_score))
-                        # try:
-                        #     experiment.log({
-                        #         'learning rate': optimizer.param_groups[0]['lr'],
-                        #         'validation Dice': val_score,
-                        #         'images': wandb.Image(images[0].cpu()),
-                        #         'masks': {
-                        #             'true': wandb.Image(true_masks[0].float().cpu()),
-                        #             'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                        #         },
-                        #         'step': global_step,
-                        #         'epoch': epoch,
-                        #         **histograms
-                        #     })
-                        # except:
-                        #     pass
 
+        train_losses.append(epoch_loss)
+        val_losses.append(val_loss)
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
             state_dict['mask_values'] = dataset.mask_values
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
+    
+    #  print train_losses and val_losses
+    epochs_ls = list(range(1, epochs + 1))
+    plt.figure()
+    plt.plot(epochs_ls, train_losses, 'b-', label='Training Loss')
+    plt.plot(epochs_ls, val_losses, 'r-', label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss')
+    plt.legend()
+    plt.show()
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=15, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=8, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
@@ -231,7 +259,7 @@ if __name__ == '__main__':
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
     # model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-    model = sm.Unet('resnet34',
+    model = sm.Unet('resnet50',
                     encoder_weights='imagenet', 
                     classes=args.classes,
                     activation='softmax')

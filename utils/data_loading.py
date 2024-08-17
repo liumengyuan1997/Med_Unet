@@ -14,7 +14,6 @@ from tqdm import tqdm
 import torch.nn.functional as F
 import os
 
-
 def load_image(filename):
     ext = splitext(filename)[1]
     if ext == '.npy':
