@@ -20,9 +20,12 @@ from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
 from utils.utils import get_training_params
 
-dir_img = Path('./data/original/imgs/coronal')
-dir_mask = Path('./data/original/masks/coronal')
-dir_checkpoint = Path('./checkpoints/')
+import torch
+torch.cuda.empty_cache()
+
+dir_img = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\group1- unet\\Med_Unet\\data\\imgs\\')
+dir_mask = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\group1- unet\\Med_Unet\\data\\masks\\')
+dir_checkpoint = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\group1- unet\\Med_Unet\\checkpoints\\')
 
 
 def train_model(
@@ -48,7 +51,7 @@ def train_model(
     # except (AssertionError, RuntimeError, IndexError):
     # Define transformations for data augmentation
     transform = transforms.Compose([
-        transforms.RandomHorizontalFlip(),
+        # transforms.RandomHorizontalFlip(),
         transforms.RandomVerticalFlip(),
         transforms.RandomRotation(90),
         transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(256)
@@ -70,7 +73,8 @@ def train_model(
     train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
     # 3. Create data loaders
-    loader_args = dict(batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
+    
+    loader_args = dict(batch_size=batch_size, num_workers=8, pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
@@ -111,7 +115,10 @@ def train_model(
 
     # goal: maximize Dice score
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)
-    grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
+    from torch.amp import GradScaler
+    grad_scaler = GradScaler(enabled=amp)
+    # grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
+
     # criterion = nn.CrossEntropyLoss()
     criterion = sm.losses.FocalLoss('multiclass')
     global_step = 0
@@ -177,7 +184,7 @@ def train_model(
                         val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
 
-                        logging.info('Validation IoU score: {}'.format(val_score))
+                        logging.info('Validation score: {}'.format(val_score))
                         # try:
                         #     experiment.log({
                         #         'learning rate': optimizer.param_groups[0]['lr'],

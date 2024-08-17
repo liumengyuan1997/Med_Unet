@@ -38,7 +38,7 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
 
 
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, mask_dir: str, scale: float=None, newW: int=None, newH: int=None, interval: int=1, mask_suffix: str = '', augmentations=None):
+    def __init__(self, images_dir: str, mask_dir: str, scale: float=None, newW: int=None, newH: int=None, interval: int=1, mask_suffix: str = '', augmentations=None, transform = None):
         self.images_dir = Path(images_dir)
         self.mask_dir = Path(mask_dir)
         self.scale = scale
@@ -46,6 +46,7 @@ class BasicDataset(Dataset):
         self.newH = newH
         self.mask_suffix = mask_suffix
         self.augmentations = augmentations  # Add augmentations parameter
+        self.transform = transform
 
         # deal with skipping steps
         self.ids = []
