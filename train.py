@@ -13,6 +13,7 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split
 import segmentation_models_pytorch as sm
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import wandb
 from evaluate import evaluate
@@ -106,11 +107,15 @@ def train_model(
     # criterion = nn.CrossEntropyLoss()
     criterion = sm.losses.FocalLoss('multiclass')
     global_step = 0
+    train_losses = []
+    val_losses = []
 
     # 5. Begin training
     for epoch in range(1, epochs + 1):
         model.train()
         epoch_loss = 0
+        epoch_val_loss = 0
+
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images, true_masks = batch['image'], batch['mask']
@@ -165,17 +170,38 @@ def train_model(
                             if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        val_score = evaluate(model, val_loader, device, amp)
+                        val_loss, val_score = evaluate(model, val_loader, device, amp)
+                        # print("back_loss: " + str(val_loss))
+                        epoch_val_loss += val_loss
                         scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
 
+        train_losses.append(epoch_loss / len(train_loader))
+        val_losses.append(val_loss)
+        # print("train_losses_ls: " + str(train_losses))
+        # print("val_losses_ls: " + str(val_losses))
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
             state_dict['mask_values'] = dataset.mask_values
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
+    
+    # save final dice score to file Dice_Scores_Memo_differentInputSize.txt
+    with open("Dice_Scores_Memo_differentInputSize.txt", "a") as file:
+        file.write(f"{val_score}\n")
+
+    #  print train_losses and val_losses
+    epochs_ls = list(range(1, epochs + 1))
+    plt.figure()
+    plt.plot(epochs_ls, train_losses, 'b-', label='Training Loss')
+    plt.plot(epochs_ls, val_losses, 'r-', label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss')
+    plt.legend()
+    plt.show()
 
 
 def get_args():

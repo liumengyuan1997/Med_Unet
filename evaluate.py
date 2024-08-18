@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from utils.dice_score import multiclass_dice_coeff, dice_coeff
+from utils.dice_score import multiclass_dice_coeff, dice_coeff, dice_loss
 import segmentation_models_pytorch as sm
 
 @torch.inference_mode()
@@ -12,6 +12,9 @@ def evaluate(net, dataloader, device, amp):
     dice_score = 0
     # iou_score = 0
     # fbeta_score = 0
+    val_loss = 0
+
+    criterion = sm.losses.FocalLoss('multiclass')
 
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
@@ -33,6 +36,16 @@ def evaluate(net, dataloader, device, amp):
                 
             else:
                 assert mask_true.min() >= 0 and mask_true.max() < net.n_classes, 'True mask indices should be in [0, n_classes['
+                # calculate validation loss
+                loss = criterion(mask_pred, mask_true)
+                loss += dice_loss(
+                    F.softmax(mask_pred, dim=1).float(),
+                    F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
+                    multiclass=True
+                )
+                val_loss += loss.item()
+                # print("val loss per val batch: " + str(val_loss))
+                
                 # convert to one-hot format
                 # mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
                 # mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2).float()
@@ -50,4 +63,4 @@ def evaluate(net, dataloader, device, amp):
     net.train()
 
 
-    return dice_score / max(num_val_batches, 1)
+    return (val_loss / max(num_val_batches, 1), dice_score / max(num_val_batches, 1))
