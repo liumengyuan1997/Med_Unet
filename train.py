@@ -52,9 +52,9 @@ def train_model(
     # Define transformations for data augmentation
     transform = transforms.Compose([
         # transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
+        # transforms.RandomVerticalFlip(),
         transforms.RandomRotation(90),
-        transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(256)
+        transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
     ])
 
     dataset = BasicDataset(
