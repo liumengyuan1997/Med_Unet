@@ -62,8 +62,8 @@ def get_args():
     # old version
     # parser.add_argument('--scale', '-s', type=float, default=1.0,
     #                     help='Scale factor for the input images')
-    # parser.add_argument('--imgW', '-iw', type=int, default=256)
-    # parser.add_argument('--imgH', '-ih', type=int, default=256)
+    # parser.add_argument('--imgW', '-iw', type=int, default=224)
+    # parser.add_argument('--imgH', '-ih', type=int, default=224)
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     

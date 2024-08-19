@@ -40,7 +40,7 @@ optional arguments:
   --amp                 Use mixed precision
 ```
 
-By default, the image resizing(preprocessing) option is `size` is [256, 256], which is width and height. You can change it to different size as you wish. If you want to change the option to scale, you can add `--scale` (1.0 is the max, which can give better results. If you want to use less memory, you can set it to 0.5.)
+By default, the image resizing(preprocessing) option is `size` is [224, 224], which is width and height. You can change it to different size as you wish. If you want to change the option to scale, you can add `--scale` (1.0 is the max, which can give better results. If you want to use less memory, you can set it to 0.5.)
 
 Automatic mixed precision is also available with the `--amp` flag. [Mixed precision](https://arxiv.org/abs/1710.03740) allows the model to use less memory and to be faster on recent GPUs by using FP16 arithmetic. Enabling AMP is recommended.
 
@@ -83,6 +83,6 @@ optional arguments:
 ```
 You can specify which model file to use with `--model MODEL.pth`.
 
-Same as training, by default, the image resizing(preprocessing) option is `size` is [256, 256], which is width and height. You can change it to different size as you wish. If you want to change the option to scale, you can add `--scale` (1.0 is the max, which can give better results. If you want to use less memory, you can set it to 0.5.)
+Same as training, by default, the image resizing(preprocessing) option is `size` is [224, 224], which is width and height. You can change it to different size as you wish. If you want to change the option to scale, you can add `--scale` (1.0 is the max, which can give better results. If you want to use less memory, you can set it to 0.5.)
 
 **Note : Don't forget to change the directory path in train.py based on how you stored the figures. Those lines are on 23-25**

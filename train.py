@@ -25,8 +25,8 @@ from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
 
-dir_img = Path('./data/original/imgs/axial')
-dir_mask = Path('./data/original/masks/axial')
+dir_img = Path('./data/original/imgs/coronal')
+dir_mask = Path('./data/original/masks/coronal')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -111,8 +111,16 @@ def train_model(
 
     # criterion = nn.CrossEntropyLoss()
     criterion = sm.losses.FocalLoss('multiclass')
+    # criterion = sm.losses.DiceLoss('multiclass')
+    # criterion = sm.losses.TverskyLoss(mode='multiclass', alpha=0.4, beta=0.6)
+    # criterion = sm.losses.JaccardLoss('multiclass')
+    # criterion = sm.losses.LovaszLoss('multiclass')
     # criterion = monai.losses.HausdorffDTLoss(reduction='none')
     # criterion = ABL()
+
+    # #tverskyLoss not cuccess version
+    # criterion = nn.CrossEntropyLoss()
+    # criterion1 = sm.losses.LovaszLoss('multiclass')
 
     global_step = 0
     train_losses = []
@@ -122,7 +130,9 @@ def train_model(
     for epoch in range(1, epochs + 1):
         model.train()
         epoch_loss = 0
-        epoch_val_loss = 0
+        HDLossSum = 0
+        DiceLossSum = 0
+        
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images, true_masks = batch['image'], batch['mask']
@@ -142,12 +152,25 @@ def train_model(
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                     else:
                         # # HD + Dice
-                        # loss = criterion(masks_pred, F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float())
-                        # loss += dice_loss(
+                        # HDLoss = criterion(masks_pred, F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float())
+                        # DiceLoss = dice_loss(
                         #     F.softmax(masks_pred, dim=1).float(),
                         #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                         #     multiclass=True
                         # )
+
+                        # HDLossSum += HDLoss
+                        # DiceLossSum += DiceLoss
+
+                        # if epoch == 1:
+                        #     loss = HDLoss + DiceLoss
+                            
+                        #     # print(loss)
+                        # else:
+                        #     loss = HDLoss + HDLossSumOld/DiceLossSumOld * DiceLoss
+                        
+                        #     # print(HDLossSum, DiceLossSum, HDLossSum/DiceLossSum)
+                        #     # print(loss)
 
                         # Focal + Dice (!Dim)
                         loss = criterion(masks_pred, true_masks)
@@ -157,8 +180,18 @@ def train_model(
                             multiclass=True
                         )
 
+                        #  # Dice loss itself
+                        # loss = criterion(masks_pred, true_masks)
+
+                        # # Lovasz loss (not success)
+                        # if epoch < epochs * 3/4:
+                        #     loss = criterion(masks_pred, true_masks)
+                        # else:
+                        #     loss = criterion1(masks_pred, true_masks)
+
+
                         # # BD + Dice
-                        # loss = 0.01*criterion(masks_pred, true_masks)
+                        # loss = 0.2 * criterion(masks_pred, true_masks)
                         # loss += dice_loss(
                         #     F.softmax(masks_pred, dim=1).float(),
                         #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
@@ -195,7 +228,6 @@ def train_model(
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
                         val_loss, val_score = evaluate(model, val_loader, device, amp)
-                        epoch_val_loss += val_loss
                         scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
@@ -208,6 +240,9 @@ def train_model(
             state_dict['mask_values'] = dataset.mask_values
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
+
+        HDLossSumOld = HDLossSum
+        DiceLossSumOld = DiceLossSum
     
     #  print train_losses and val_losses
     epochs_ls = list(range(1, epochs + 1))
@@ -224,7 +259,7 @@ def train_model(
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=15, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=8, help='Batch size')
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
@@ -236,8 +271,8 @@ def get_args():
     
     # old version of scale and img size options
     # parser.add_argument('--scale', '-s', type=float, default=1, help='Downscaling factor of the images')
-    # parser.add_argument('--imgW', '-iw', type=int, default=256)
-    # parser.add_argument('--imgH', '-ih', type=int, default=256)
+    # parser.add_argument('--imgW', '-iw', type=int, default=224)
+    # parser.add_argument('--imgH', '-ih', type=int, default=224)
     parser.add_argument('--interval', '-itv', type=int, default=1)
     parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
                         help='Percent of the data that is used as validation (0-100)')

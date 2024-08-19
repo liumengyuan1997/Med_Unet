@@ -20,8 +20,13 @@ def evaluate(net, dataloader, device, amp):
     # fbeta_score = 0
     val_loss = 0
 
+
     # criterion = nn.CrossEntropyLoss()
     criterion = sm.losses.FocalLoss('multiclass')
+    # criterion = sm.losses.DiceLoss('multiclass')
+    # criterion = sm.losses.TverskyLoss('multiclass', alpha=0.4, beta=0.6)
+    # criterion = sm.losses.JaccardLoss('multiclass')
+    # criterion = sm.losses.LovaszLoss('multiclass')
     # criterion = monai.losses.HausdorffDTLoss(reduction='none')
     # criterion = ABL()
 
@@ -45,23 +50,34 @@ def evaluate(net, dataloader, device, amp):
                 
             else:
                 assert mask_true.min() >= 0 and mask_true.max() < net.n_classes, 'True mask indices should be in [0, n_classes['
-                # calculate validation loss
+                # Focal + Dice
                 loss = criterion(mask_pred, mask_true)
                 loss += dice_loss(
                     F.softmax(mask_pred, dim=1).float(),
                     F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
                     multiclass=True
                 )
-                val_loss += loss.item()
 
-                # # BD + Dice
-                # loss = 0.01*criterion(mask_pred, mask_true)
+                # # Dice/CrossEntropy itself
+                # loss = criterion(mask_pred, mask_true)
+
+                # # HD + Dice
+                # loss = criterion(mask_pred, F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float())
                 # loss += dice_loss(
                 #     F.softmax(mask_pred, dim=1).float(),
                 #     F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
                 #     multiclass=True
                 # )
-                
+
+                # # BD + Dice
+                # loss = 0.2 * criterion(mask_pred, mask_true)
+                # loss += dice_loss(
+                #     F.softmax(mask_pred, dim=1).float(),
+                #     F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
+                #     multiclass=True
+                # )
+
+                val_loss += loss.item()
                 # convert to one-hot format
                 # mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
                 # mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2).float()
