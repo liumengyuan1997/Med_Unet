@@ -189,8 +189,8 @@ def train_model(
             logging.info(f'Checkpoint {epoch} saved!')
     
     # save final dice score to file Dice_Scores_Memo_differentInputSize.txt
-    with open("Dice_Scores_Memo_differentInputSize.txt", "a") as file:
-        file.write(f"{val_score}\n")
+    with open("Dice_Scores_Memo_S1_differentInputSize.txt", "a") as file:
+        file.write(f"{round(val_score, 4)}\n")
 
     #  print train_losses and val_losses
     epochs_ls = list(range(1, epochs + 1))
