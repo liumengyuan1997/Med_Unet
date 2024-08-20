@@ -110,12 +110,12 @@ def train_model(
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
 
     # criterion = nn.CrossEntropyLoss()
-    criterion = sm.losses.FocalLoss('multiclass')
+    # criterion = sm.losses.FocalLoss('multiclass')
     # criterion = sm.losses.DiceLoss('multiclass')
     # criterion = sm.losses.TverskyLoss(mode='multiclass', alpha=0.4, beta=0.6)
     # criterion = sm.losses.JaccardLoss('multiclass')
     # criterion = sm.losses.LovaszLoss('multiclass')
-    # criterion = monai.losses.HausdorffDTLoss(reduction='none')
+    criterion = monai.losses.HausdorffDTLoss(sigmoid=True)
     # criterion = ABL()
 
     # #tverskyLoss not cuccess version
@@ -151,34 +151,36 @@ def train_model(
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                     else:
-                        # # HD + Dice
-                        # HDLoss = criterion(masks_pred, F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float())
-                        # DiceLoss = dice_loss(
-                        #     F.softmax(masks_pred, dim=1).float(),
-                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                        #     multiclass=True
-                        # )
-
-                        # HDLossSum += HDLoss
-                        # DiceLossSum += DiceLoss
-
-                        # if epoch == 1:
-                        #     loss = HDLoss + DiceLoss
-                            
-                        #     # print(loss)
-                        # else:
-                        #     loss = HDLoss + HDLossSumOld/DiceLossSumOld * DiceLoss
-                        
-                        #     # print(HDLossSum, DiceLossSum, HDLossSum/DiceLossSum)
-                        #     # print(loss)
-
-                        # Focal + Dice (!Dim)
-                        loss = criterion(masks_pred, true_masks)
-                        loss += dice_loss(
+                        # HD + Dice
+                        HDLoss = criterion(masks_pred, F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float())
+                        DiceLoss = dice_loss(
                             F.softmax(masks_pred, dim=1).float(),
                             F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                             multiclass=True
                         )
+
+                        HDLossSum += HDLoss
+                        DiceLossSum += DiceLoss
+
+                        if epoch == 1:
+                            loss = HDLoss + DiceLoss
+                            
+                            # print(loss)
+                        else:
+                            # print(HDLossSumOld, DiceLossSumOld)
+                            loss = HDLoss + HDLossSumOld/DiceLossSumOld * DiceLoss
+
+                            print(HDLoss, DiceLoss)
+                            # print(HDLossSum, DiceLossSum, HDLossSum/DiceLossSum)
+                            # print(loss)
+
+                        # # Focal + Dice (!Dim)
+                        # loss = criterion(masks_pred, true_masks)
+                        # loss += dice_loss(
+                        #     F.softmax(masks_pred, dim=1).float(),
+                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
+                        #     multiclass=True
+                        # )
 
                         #  # Dice loss itself
                         # loss = criterion(masks_pred, true_masks)
@@ -241,9 +243,13 @@ def train_model(
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
 
-        HDLossSumOld = HDLossSum
-        DiceLossSumOld = DiceLossSum
-    
+        HDLossSumOld = HDLossSum.clone().detach()
+        DiceLossSumOld = DiceLossSum.clone().detach() 
+
+    # # save final dice score to file Dice_Scores_Memo_differentInputSize.txt
+    # with open("Dice_Scores_Memo_S2_differentInputSize.txt", "a") as file:
+    #     file.write(f"{val_score}\n")
+
     #  print train_losses and val_losses
     epochs_ls = list(range(1, epochs + 1))
     plt.figure()

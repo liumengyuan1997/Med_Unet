@@ -22,12 +22,12 @@ def evaluate(net, dataloader, device, amp):
 
 
     # criterion = nn.CrossEntropyLoss()
-    criterion = sm.losses.FocalLoss('multiclass')
+    # criterion = sm.losses.FocalLoss('multiclass')
     # criterion = sm.losses.DiceLoss('multiclass')
     # criterion = sm.losses.TverskyLoss('multiclass', alpha=0.4, beta=0.6)
     # criterion = sm.losses.JaccardLoss('multiclass')
     # criterion = sm.losses.LovaszLoss('multiclass')
-    # criterion = monai.losses.HausdorffDTLoss(reduction='none')
+    criterion = monai.losses.HausdorffDTLoss(reduction='none')
     # criterion = ABL()
 
     # iterate over the validation set
@@ -50,13 +50,13 @@ def evaluate(net, dataloader, device, amp):
                 
             else:
                 assert mask_true.min() >= 0 and mask_true.max() < net.n_classes, 'True mask indices should be in [0, n_classes['
-                # Focal + Dice
-                loss = criterion(mask_pred, mask_true)
-                loss += dice_loss(
-                    F.softmax(mask_pred, dim=1).float(),
-                    F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
-                    multiclass=True
-                )
+                # # Focal + Dice
+                # loss = criterion(mask_pred, mask_true)
+                # loss += dice_loss(
+                #     F.softmax(mask_pred, dim=1).float(),
+                #     F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
+                #     multiclass=True
+                # )
 
                 # # Dice/CrossEntropy itself
                 # loss = criterion(mask_pred, mask_true)
@@ -77,7 +77,7 @@ def evaluate(net, dataloader, device, amp):
                 #     multiclass=True
                 # )
 
-                val_loss += loss.item()
+                # val_loss += loss.item()
                 # convert to one-hot format
                 # mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
                 # mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2).float()
