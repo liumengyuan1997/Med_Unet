@@ -20,7 +20,7 @@ from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
 from utils.utils import get_training_params
 
-from albumentations import Compose, HorizontalFlip
+from albumentations import Compose, HorizontalFlip, VerticalFlip, RandomRotate90, RandomCrop
 from albumentations.pytorch import ToTensorV2
 
 import torch
@@ -58,7 +58,12 @@ def train_model(
         # transforms.RandomVerticalFlip(),
         # transforms.RandomRotation(90),
         # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
-        HorizontalFlip(0.5)
+        HorizontalFlip(p=0.5),
+        # HorizontalFlip(p=0.5),  # Apply horizontal flip with a probability of 0.5
+        # VerticalFlip(p=0.5),    # Apply vertical flip with a probability of 0.5
+        # RandomRotate90(p=0.5),  # Apply random rotation by 90 degrees with a probability of 0.5
+        # RandomCrop(height=224, width=224, p=1.0),  # Apply random cropping to a size of 224x224
+        # ToTensorV2() 
     ])
 
     dataset = BasicDataset(
