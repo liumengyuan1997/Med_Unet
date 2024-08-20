@@ -24,6 +24,10 @@ from utils.utils import get_training_params, compute_distance_map
 from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
+from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
+from albumentations.pytorch import ToTensorV2
+
+
 
 dir_img = Path('./data/04s1_original/imgs')
 dir_mask = Path('./data/04s1_original/masks')
@@ -48,11 +52,12 @@ def train_model(
         gradient_clipping: float = 1.0,
 ):
     
-    transform = transforms.Compose([
+    transform = Compose([
         # transforms.RandomHorizontalFlip(),
         # transforms.RandomVerticalFlip(),
         # transforms.RandomRotation(90),
-        transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
+        HorizontalFlip(0.5),
+        # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
     ])
 
     # 1. Create dataset
@@ -66,7 +71,7 @@ def train_model(
         newW=imgW if imgW else None,
         newH=imgH if imgH else None,
         interval=interval if interval else 1,  # default interval
-        transform=transform
+        # transform=transform
     )
 
     # 2. Split into train / validation partitions
