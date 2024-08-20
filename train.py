@@ -25,8 +25,8 @@ from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
 
-dir_img = Path('./data/original/imgs/coronal')
-dir_mask = Path('./data/original/masks/coronal')
+dir_img = Path('./data/04s1_original/imgs')
+dir_mask = Path('./data/04s1_original/masks')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -35,7 +35,6 @@ def train_model(
         device,
         epochs: int = 15,
         batch_size: int = 1,
-        # learning_rate: float = 1e-5,
         learning_rate: float = 1e-6,
         val_percent: float = 0.1,
         save_checkpoint: bool = True,
@@ -48,6 +47,14 @@ def train_model(
         momentum: float = 0.999,
         gradient_clipping: float = 1.0,
 ):
+    
+    transform = transforms.Compose([
+        # transforms.RandomHorizontalFlip(),
+        # transforms.RandomVerticalFlip(),
+        # transforms.RandomRotation(90),
+        transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
+    ])
+
     # 1. Create dataset
     # try:
     #     dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
@@ -58,7 +65,8 @@ def train_model(
         scale=img_scale if img_scale else None,
         newW=imgW if imgW else None,
         newH=imgH if imgH else None,
-        interval=interval if interval else 1  # default interval
+        interval=interval if interval else 1,  # default interval
+        transform=transform
     )
 
     # 2. Split into train / validation partitions
@@ -110,12 +118,12 @@ def train_model(
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
 
     # criterion = nn.CrossEntropyLoss()
-    # criterion = sm.losses.FocalLoss('multiclass')
+    criterion = sm.losses.FocalLoss('multiclass')
     # criterion = sm.losses.DiceLoss('multiclass')
     # criterion = sm.losses.TverskyLoss(mode='multiclass', alpha=0.4, beta=0.6)
     # criterion = sm.losses.JaccardLoss('multiclass')
     # criterion = sm.losses.LovaszLoss('multiclass')
-    criterion = monai.losses.HausdorffDTLoss(sigmoid=True)
+    # criterion = monai.losses.HausdorffDTLoss(sigmoid=True)
     # criterion = ABL()
 
     # #tverskyLoss not cuccess version
@@ -130,8 +138,6 @@ def train_model(
     for epoch in range(1, epochs + 1):
         model.train()
         epoch_loss = 0
-        HDLossSum = 0
-        DiceLossSum = 0
         
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
@@ -151,47 +157,6 @@ def train_model(
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                     else:
-                        # HD + Dice
-                        HDLoss = criterion(masks_pred, F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float())
-                        DiceLoss = dice_loss(
-                            F.softmax(masks_pred, dim=1).float(),
-                            F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                            multiclass=True
-                        )
-
-                        HDLossSum += HDLoss
-                        DiceLossSum += DiceLoss
-
-                        if epoch == 1:
-                            loss = HDLoss + DiceLoss
-                            
-                            # print(loss)
-                        else:
-                            # print(HDLossSumOld, DiceLossSumOld)
-                            loss = HDLoss + HDLossSumOld/DiceLossSumOld * DiceLoss
-
-                            print(HDLoss, DiceLoss)
-                            # print(HDLossSum, DiceLossSum, HDLossSum/DiceLossSum)
-                            # print(loss)
-
-                        # # Focal + Dice (!Dim)
-                        # loss = criterion(masks_pred, true_masks)
-                        # loss += dice_loss(
-                        #     F.softmax(masks_pred, dim=1).float(),
-                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                        #     multiclass=True
-                        # )
-
-                        #  # Dice loss itself
-                        # loss = criterion(masks_pred, true_masks)
-
-                        # # Lovasz loss (not success)
-                        # if epoch < epochs * 3/4:
-                        #     loss = criterion(masks_pred, true_masks)
-                        # else:
-                        #     loss = criterion1(masks_pred, true_masks)
-
-
                         # # BD + Dice
                         # loss = 0.2 * criterion(masks_pred, true_masks)
                         # loss += dice_loss(
@@ -199,6 +164,12 @@ def train_model(
                         #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                         #     multiclass=True
                         # )
+                        loss = criterion(masks_pred, true_masks)
+                        loss += dice_loss(
+                            F.softmax(masks_pred, dim=1).float(),
+                            F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
+                            multiclass=True
+                        )
 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -243,12 +214,9 @@ def train_model(
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
 
-        HDLossSumOld = HDLossSum.clone().detach()
-        DiceLossSumOld = DiceLossSum.clone().detach() 
-
-    # # save final dice score to file Dice_Scores_Memo_differentInputSize.txt
-    # with open("Dice_Scores_Memo_S2_differentInputSize.txt", "a") as file:
-    #     file.write(f"{val_score}\n")
+    # save final dice score to file Dice_Scores_Memo_optimum.txt
+    with open("Dice_Scores_Memo_optimum.txt", "a") as file:
+        file.write(f"{val_score}\n")
 
     #  print train_losses and val_losses
     epochs_ls = list(range(1, epochs + 1))

@@ -1,0 +1,50 @@
+# BD Loss + Dice Loss, axial view, 0.5 scale
+0.8317863345146179 // with augementation
+0.7995166778564453 // without
+
+# Focal Loss + Dice Loss, axial view, 0.5 scale
+0.9101365208625793 // with augmentation
+0.4740718901157379 // without
+
+# Focal Loss + Dice Loss second time, axial view, 0.5 scale
+0.9292961955070496 // without augmentation
+0.8428433537483215 // with augmentation
+0.9003013968467712 // with augmentation
+
+# Focal Loss + Dice Loss, axial view, second dataset, 0.5 scale
+0.8980106115341187 // with augmentation
+0.8659154772758484 // without augmentation
+
+# Focal Loss + Dice Loss, coronal view, second dataset, 0.5 scale
+0.645675003528595 // with augmentation
+0.6514874696731567 // without augmentation
+
+# Focal Loss + Dice Loss, coronal view, second dataset, 1.0 scale
+0.6939607858657837 // first time
+0.709136962890625 // second time
+
+# Focal Loss + Dice Loss, axial view, first dataset, 1.0 scale
+0.9589647650718689 // without augmentation
+0.9079559445381165 // with augmentation
+
+# Focal Loss + Dice Loss, axial view, first dataset, 0.6 scale
+0.9089183807373047 // without augmentation
+0.9110456109046936 // with augmentation
+
+# Focal Loss + Dice Loss, axial view, second dataset, 0.6 scale
+0.8056742548942566 // with augmentation
+0.8645673394203186 // without augmentation
+
+# Focal Loss + Dice Loss, axial view, third dataset, 0.6 scale
+0.9030791521072388 // with
+0.8125284910202026 // without
+
+# Focal Loss + Dice Loss, axial view, third dataset, 1.0 scale
+0.9206680655479431 // with
+0.9123084545135498 // without
+
+# Focal Loss + Dice Loss, axial view, fourth dataset, 0.6 scale
+0.7653336524963379
+0.1702127605676651
+0.4522753953933716
+0.8286842107772827

@@ -37,13 +37,14 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
 
 
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, mask_dir: str, scale: float=None, newW: int=None, newH: int=None, interval: int=1, mask_suffix: str = ''):
+    def __init__(self, images_dir: str, mask_dir: str, scale: float=None, newW: int=None, newH: int=None, interval: int=1, mask_suffix: str = '', transform = None):
         self.images_dir = Path(images_dir)
         self.mask_dir = Path(mask_dir)
         self.scale = scale
         self.newW = newW
         self.newH = newH
         self.mask_suffix = mask_suffix
+        self.transform = transform
 
         # deal with skipping steps
         self.ids = []
@@ -115,7 +116,7 @@ class BasicDataset(Dataset):
 
             if (img > 1).any():
                 img = img / 255.0
-            img = torch.from_numpy(img).float()
+            img = torch.from_numpy(np.copy(img)).float()
             img = F.pad(img, padding, mode='constant', value=0)
 
             return img.numpy()
@@ -132,6 +133,15 @@ class BasicDataset(Dataset):
 
         assert img.size == mask.size, \
             f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
+
+        # Apply augmentations if provided
+        if self.transform:
+
+            img = self.transform(img)
+            mask = self.transform(mask)
+            # augmented = self.transform(image=np.array(img), mask=np.array(mask))
+            # img = Image.fromarray(augmented['image'])
+            # mask = Image.fromarray(augmented['mask'])
 
         img = self.preprocess(mask_values=self.mask_values, pil_img = img, is_mask=False, 
                               scale = self.scale if self.scale else None,
