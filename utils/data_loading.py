@@ -38,14 +38,13 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
 
 
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, mask_dir: str, scale: float=None, newW: int=None, newH: int=None, interval: int=1, mask_suffix: str = '', augmentations=None, transform = None):
+    def __init__(self, images_dir: str, mask_dir: str, scale: float=None, newW: int=None, newH: int=None, interval: int=1, mask_suffix: str = '', transform = None):
         self.images_dir = Path(images_dir)
         self.mask_dir = Path(mask_dir)
         self.scale = scale
         self.newW = newW
         self.newH = newH
         self.mask_suffix = mask_suffix
-        self.augmentations = augmentations  # Add augmentations parameter
         self.transform = transform
 
         # deal with skipping steps
@@ -137,8 +136,8 @@ class BasicDataset(Dataset):
             f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
 
         # Apply augmentations if provided
-        if self.augmentations:
-            augmented = self.augmentations(image=np.array(img), mask=np.array(mask))
+        if self.transform:
+            augmented = self.transform(image=np.array(img), mask=np.array(mask))
             img = Image.fromarray(augmented['image'])
             mask = Image.fromarray(augmented['mask'])
 

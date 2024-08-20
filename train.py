@@ -20,6 +20,9 @@ from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
 from utils.utils import get_training_params
 
+from albumentations import Compose, HorizontalFlip
+from albumentations.pytorch import ToTensorV2
+
 import torch
 torch.cuda.empty_cache()
 
@@ -50,11 +53,12 @@ def train_model(
     #     dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
     # except (AssertionError, RuntimeError, IndexError):
     # Define transformations for data augmentation
-    transform = transforms.Compose([
+    transform = Compose([
         # transforms.RandomHorizontalFlip(),
         # transforms.RandomVerticalFlip(),
-        transforms.RandomRotation(90),
-        transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
+        # transforms.RandomRotation(90),
+        # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
+        HorizontalFlip(0.5)
     ])
 
     dataset = BasicDataset(
