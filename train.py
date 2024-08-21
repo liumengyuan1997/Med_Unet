@@ -23,8 +23,9 @@ from torch.amp import GradScaler
 from albumentations import Compose, HorizontalFlip, VerticalFlip, RandomRotate90, RandomCrop
 from albumentations.pytorch import ToTensorV2
 from memory_profiler import profile
-
 import torch
+
+
 torch.cuda.empty_cache()
 
 dir_img = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\Med_Unet\\data\\imgs\\')
@@ -59,9 +60,9 @@ def train_model(
         # transforms.RandomVerticalFlip(),
         # transforms.RandomRotation(90),
         # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
-        HorizontalFlip(p=0.5),
+        # HorizontalFlip(p=0.5),
         # HorizontalFlip(p=0.5),  # Apply horizontal flip with a probability of 0.5
-        # VerticalFlip(p=0.5),    # Apply vertical flip with a probability of 0.5
+        # VerticalFlip(p=0.5)   # Apply vertical flip with a probability of 0.5
         # RandomRotate90(p=0.5),  # Apply random rotation by 90 degrees with a probability of 0.5
         # RandomCrop(height=224, width=224, p=1.0),  # Apply random cropping to a size of 224x224
         # ToTensorV2() 

@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 import torch.nn.functional as F
 import os
-
+from PIL import Image
 
 def load_image(filename):
     ext = splitext(filename)[1]
@@ -121,39 +121,8 @@ class BasicDataset(Dataset):
             img = F.pad(img, padding, mode='constant', value=0)
 
             return img.numpy()
-
-    # def __getitem__(self, idx):
-    #     name = self.ids[idx]
-    #     mask_file = list(self.mask_dir.glob(name + self.mask_suffix + '.*'))
-    #     img_file = list(self.images_dir.glob(name + '.*'))
-
-    #     assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
-    #     assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}'
-    #     mask = load_image(mask_file[0])
-    #     img = load_image(img_file[0])
-
-    #     assert img.size == mask.size, \
-    #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
-
-    #     # Apply augmentations if provided
-    #     if self.transform:
-    #         augmented = self.transform(image=np.array(img), mask=np.array(mask))
-    #         img = Image.fromarray(augmented['image'])
-    #         mask = Image.fromarray(augmented['mask'])
-
-    #     img = self.preprocess(mask_values=self.mask_values, pil_img = img, is_mask=False, 
-    #                           scale = self.scale if self.scale else None,
-    #                           newW = self.newW if self.newW else None,
-    #                           newH = self.newH if self.newH else None)
-    #     mask = self.preprocess(mask_values=self.mask_values, pil_img=mask, is_mask=True, 
-    #                           scale = self.scale if self.scale else None,
-    #                           newW = self.newW if self.newW else None,
-    #                           newH = self.newH if self.newH else None)
-
-    #     return {
-    #         'image': torch.as_tensor(img.copy()).float().contiguous(),
-    #         'mask': torch.as_tensor(mask.copy()).long().contiguous()
-    #     }    
+        
+    # regular getitem without copy
     def __getitem__(self, idx):
         name = self.ids[idx]
         mask_file = list(self.mask_dir.glob(name + self.mask_suffix + '.*'))
@@ -173,19 +142,52 @@ class BasicDataset(Dataset):
             img = Image.fromarray(augmented['image'])
             mask = Image.fromarray(augmented['mask'])
 
-        img = self.preprocess(mask_values=self.mask_values, pil_img=img, is_mask=False, 
-                            scale=self.scale if self.scale else None,
-                            newW=self.newW if self.newW else None,
-                            newH=self.newH if self.newH else None)
+        img = self.preprocess(mask_values=self.mask_values, pil_img = img, is_mask=False, 
+                              scale = self.scale if self.scale else None,
+                              newW = self.newW if self.newW else None,
+                              newH = self.newH if self.newH else None)
         mask = self.preprocess(mask_values=self.mask_values, pil_img=mask, is_mask=True, 
-                            scale=self.scale if self.scale else None,
-                            newW=self.newW if self.newW else None,
-                            newH=self.newH if self.newH else None)
+                              scale = self.scale if self.scale else None,
+                              newW = self.newW if self.newW else None,
+                              newH = self.newH if self.newH else None)
 
         return {
-            'image': torch.as_tensor(img).float().contiguous(),  # No .copy()
-            'mask': torch.as_tensor(mask).long().contiguous()    # No .copy()
-        }
+            'image': torch.as_tensor(img.copy()).float().contiguous(),
+            'mask': torch.as_tensor(mask.copy()).long().contiguous()
+        }   
+    # #regular getitem with copy 
+    # def __getitem__(self, idx):
+    #     name = self.ids[idx]
+    #     mask_file = list(self.mask_dir.glob(name + self.mask_suffix + '.*'))
+    #     img_file = list(self.images_dir.glob(name + '.*'))
+
+    #     assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
+    #     assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}'
+    #     mask = load_image(mask_file[0])
+    #     img = load_image(img_file[0])
+
+    #     assert img.size == mask.size, \
+    #         f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
+
+    #     # Apply augmentations if provided
+    #     if self.transform:
+    #         augmented = self.transform(image=np.array(img), mask=np.array(mask))
+    #         img = Image.fromarray(augmented['image'])
+    #         mask = Image.fromarray(augmented['mask'])
+
+    #     img = self.preprocess(mask_values=self.mask_values, pil_img=img, is_mask=False, 
+    #                         scale=self.scale if self.scale else None,
+    #                         newW=self.newW if self.newW else None,
+    #                         newH=self.newH if self.newH else None)
+    #     mask = self.preprocess(mask_values=self.mask_values, pil_img=mask, is_mask=True, 
+    #                         scale=self.scale if self.scale else None,
+    #                         newW=self.newW if self.newW else None,
+    #                         newH=self.newH if self.newH else None)
+
+    #     return {
+    #         'image': torch.as_tensor(img).float().contiguous(),  # No .copy()
+    #         'mask': torch.as_tensor(mask).long().contiguous()    # No .copy()
+    #     }
 
 class CarvanaDataset(BasicDataset):
     def __init__(self, images_dir, mask_dir, scale=1):
