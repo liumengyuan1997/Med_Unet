@@ -19,18 +19,19 @@ from evaluate import evaluate
 from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
 from utils.utils import get_training_params
-
+from torch.amp import GradScaler
 from albumentations import Compose, HorizontalFlip
 from albumentations.pytorch import ToTensorV2
+from memory_profiler import profile
 
 import torch
 torch.cuda.empty_cache()
 
-dir_img = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\group1- unet\\Med_Unet\\data\\imgs\\')
-dir_mask = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\group1- unet\\Med_Unet\\data\\masks\\')
-dir_checkpoint = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\group1- unet\\Med_Unet\\checkpoints\\')
+dir_img = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\Med_Unet\\data\\imgs\\')
+dir_mask = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\Med_Unet\\data\\masks\\')
+dir_checkpoint = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\Med_Unet\\checkpoints\\')
 
-
+@profile
 def train_model(
         model,
         device,
@@ -58,7 +59,13 @@ def train_model(
         # transforms.RandomVerticalFlip(),
         # transforms.RandomRotation(90),
         # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
-        HorizontalFlip(0.5)
+        
+        HorizontalFlip(p=0.5),
+        # HorizontalFlip(p=0.5),  # Apply horizontal flip with a probability of 0.5
+        # VerticalFlip(p=0.5),    # Apply vertical flip with a probability of 0.5
+        # RandomRotate90(p=0.5),  # Apply random rotation by 90 degrees with a probability of 0.5
+        # RandomCrop(height=224, width=224, p=1.0),  # Apply random cropping to a size of 224x224
+        # ToTensorV2() 
     ])
 
     dataset = BasicDataset(
@@ -78,7 +85,7 @@ def train_model(
 
     # 3. Create data loaders
     
-    loader_args = dict(batch_size=batch_size, num_workers=8, pin_memory=True)
+    loader_args = dict(batch_size=batch_size, num_workers=6, pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
@@ -119,7 +126,7 @@ def train_model(
 
     # goal: maximize Dice score
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)
-    from torch.amp import GradScaler
+ 
     grad_scaler = GradScaler(enabled=amp)
     # grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
 

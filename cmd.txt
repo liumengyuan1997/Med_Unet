@@ -1,0 +1,15 @@
+python predict.py -i data/test/test1.png -o data/output/output1.png -m checkpoints/checkpoint_epoch3.pth
+
+
+python train.py --epochs 15 --batch-size 2 --learning-rate 1e-5 --validation 10 --scale 1.0 --amp
+
+
+python train.py  --scale 1.0 --amp
+
+
+python train.py --amp
+
+
+dir_img = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\Med_Unet\\data\\imgs\\')
+dir_mask = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\Med_Unet\\data\\masks\\')
+dir_checkpoint = Path('C:\\Users\\tianc\\OneDrive\\Desktop\\MRI\\evaluation\\Med_Unet\\checkpoints\\')
