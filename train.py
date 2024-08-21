@@ -19,8 +19,13 @@ from evaluate import evaluate
 from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
 from utils.utils import get_training_params
+<<<<<<< HEAD
 from torch.amp import GradScaler
 from albumentations import Compose, HorizontalFlip
+=======
+
+from albumentations import Compose, HorizontalFlip, VerticalFlip, RandomRotate90, RandomCrop
+>>>>>>> aa3cf833728f90dd89c6ad0c838ff133bd66b2bb
 from albumentations.pytorch import ToTensorV2
 from memory_profiler import profile
 
@@ -59,7 +64,6 @@ def train_model(
         # transforms.RandomVerticalFlip(),
         # transforms.RandomRotation(90),
         # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
-        
         HorizontalFlip(p=0.5),
         # HorizontalFlip(p=0.5),  # Apply horizontal flip with a probability of 0.5
         # VerticalFlip(p=0.5),    # Apply vertical flip with a probability of 0.5
