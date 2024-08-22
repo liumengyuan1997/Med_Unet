@@ -16,19 +16,8 @@ def evaluate(net, dataloader, device, amp):
     net.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
-    # iou_score = 0
-    # fbeta_score = 0
     val_loss = 0
-
-
-    # criterion = nn.CrossEntropyLoss()
-    criterion = sm.losses.FocalLoss('multiclass')
-    # criterion = sm.losses.DiceLoss('multiclass')
-    # criterion = sm.losses.TverskyLoss('multiclass', alpha=0.4, beta=0.6)
-    # criterion = sm.losses.JaccardLoss('multiclass')
-    # criterion = sm.losses.LovaszLoss('multiclass')
-    # criterion = monai.losses.HausdorffDTLoss(reduction='none')
-    # criterion = ABL()
+    criterion = ABL()
 
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
@@ -51,16 +40,9 @@ def evaluate(net, dataloader, device, amp):
             else:
                 assert mask_true.min() >= 0 and mask_true.max() < net.n_classes, 'True mask indices should be in [0, n_classes['
 
-                # # BD + Dice
-                # loss = 0.2 * criterion(mask_pred, mask_true)
-                # loss += dice_loss(
-                #     F.softmax(mask_pred, dim=1).float(),
-                #     F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
-                #     multiclass=True
-                # )
-
-                loss = criterion(mask_pred, mask_true)
-                loss += dice_loss(
+                # BD + Dice
+                loss = 0.1 * criterion(mask_pred, mask_true)
+                loss += 0.9 * dice_loss(
                     F.softmax(mask_pred, dim=1).float(),
                     F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float(),
                     multiclass=True
@@ -68,18 +50,11 @@ def evaluate(net, dataloader, device, amp):
 
                 val_loss += loss.item()
                 # convert to one-hot format
-                # mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
-                # mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2).float()
                 mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2)
                 mask_pred = F.one_hot(mask_pred.argmax(dim=1), net.n_classes).permute(0, 3, 1, 2)
 
                 # compute the Dice score, ignoring background
                 dice_score += multiclass_dice_coeff(mask_pred[:, 1:], mask_true[:, 1:], reduce_batch_first=False)
-                
-                # compute fbeta_score and iou_score
-                # tp, fp, fn, tn = sm.metrics.get_stats(mask_pred[:, 1:], mask_true[:, 1:], mode='multilabel', threshold=0.5)
-                # fbeta_score += sm.metrics.fbeta_score(tp, fp, fn, tn, beta=0.5, reduction="micro")
-                # iou_score += sm.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
 
     net.train()
 

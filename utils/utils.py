@@ -66,3 +66,14 @@ def compute_distance_map(masks):
     distance_maps_tensor = torch.tensor(distance_maps, dtype=torch.float32).to(masks.device)
 
     return distance_maps_tensor
+
+def generateLossPlot(epochs, train_loss_ls, val_loss_ls):
+    epochs_ls = list(range(1, epochs + 1))
+    plt.figure()
+    plt.plot(epochs_ls, train_loss_ls, 'b-', label='Training Loss')
+    plt.plot(epochs_ls, val_loss_ls, 'r-', label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss')
+    plt.legend()
+    plt.show()

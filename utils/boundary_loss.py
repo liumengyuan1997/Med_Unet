@@ -17,7 +17,7 @@ def kl_div(a,b): # q,p
 def one_hot2dist(seg):
     res = np.zeros_like(seg)
     for i in range(len(seg)):
-        posmask = seg[i].astype(np.bool)
+        posmask = seg[i].astype(bool)
         if posmask.any():
             negmask = ~posmask
             res[i] = distance(negmask) * negmask - (distance(posmask) - 1) * posmask

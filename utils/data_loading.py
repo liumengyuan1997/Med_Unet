@@ -136,7 +136,6 @@ class BasicDataset(Dataset):
 
         # Apply augmentations if provided
         if self.transform:
-            print(ggggg)
             augmented = self.transform(image=np.array(img), mask=np.array(mask))
             img = Image.fromarray(augmented['image'])
             mask = Image.fromarray(augmented['mask'])

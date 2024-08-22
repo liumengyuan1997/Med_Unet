@@ -20,7 +20,7 @@ import wandb
 from evaluate import evaluate
 from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
-from utils.utils import get_training_params, compute_distance_map
+from utils.utils import get_training_params, generateLossPlot
 from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
@@ -29,8 +29,8 @@ from albumentations.pytorch import ToTensorV2
 
 
 
-dir_img = Path('./data/04s1_original/imgs')
-dir_mask = Path('./data/04s1_original/masks')
+dir_img = Path('./data/01s1_original/imgs/axial')
+dir_mask = Path('./data/01s1_original/masks/axial')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -61,9 +61,6 @@ def train_model(
     ])
 
     # 1. Create dataset
-    # try:
-    #     dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
-    # except (AssertionError, RuntimeError, IndexError):
     dataset = BasicDataset(
         images_dir=dir_img,
         mask_dir=dir_mask,
@@ -122,18 +119,8 @@ def train_model(
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
 
-    # criterion = nn.CrossEntropyLoss()
-    criterion = sm.losses.FocalLoss('multiclass')
-    # criterion = sm.losses.DiceLoss('multiclass')
-    # criterion = sm.losses.TverskyLoss(mode='multiclass', alpha=0.4, beta=0.6)
-    # criterion = sm.losses.JaccardLoss('multiclass')
-    # criterion = sm.losses.LovaszLoss('multiclass')
-    # criterion = monai.losses.HausdorffDTLoss(sigmoid=True)
-    # criterion = ABL()
-
-    # #tverskyLoss not cuccess version
-    # criterion = nn.CrossEntropyLoss()
-    # criterion1 = sm.losses.LovaszLoss('multiclass')
+    # Loss Function： boundary loss
+    criterion = ABL()
 
     global_step = 0
     train_losses = []
@@ -162,15 +149,9 @@ def train_model(
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                     else:
-                        # # BD + Dice
-                        # loss = 0.2 * criterion(masks_pred, true_masks)
-                        # loss += dice_loss(
-                        #     F.softmax(masks_pred, dim=1).float(),
-                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                        #     multiclass=True
-                        # )
-                        loss = criterion(masks_pred, true_masks)
-                        loss += dice_loss(
+                        # BD Loss + Dice Loss
+                        loss = 0.1 * criterion(masks_pred, true_masks)
+                        loss += 0.9 * dice_loss(
                             F.softmax(masks_pred, dim=1).float(),
                             F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                             multiclass=True
@@ -224,15 +205,7 @@ def train_model(
         file.write(f"{val_score}\n")
 
     #  print train_losses and val_losses
-    epochs_ls = list(range(1, epochs + 1))
-    plt.figure()
-    plt.plot(epochs_ls, train_losses, 'b-', label='Training Loss')
-    plt.plot(epochs_ls, val_losses, 'r-', label='Validation Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Loss')
-    plt.legend()
-    plt.show()
+    generateLossPlot(epochs, train_losses, val_losses)
 
 
 def get_args():
@@ -247,11 +220,7 @@ def get_args():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--scale', '-s', type=float, help='Downscaling factor of the images')
     group.add_argument('--size', '-sz', nargs=2, type=int, metavar=('WIDTH', 'HEIGHT'), help='Width and Height of the images')
-    
-    # old version of scale and img size options
-    # parser.add_argument('--scale', '-s', type=float, default=1, help='Downscaling factor of the images')
-    # parser.add_argument('--imgW', '-iw', type=int, default=224)
-    # parser.add_argument('--imgH', '-ih', type=int, default=224)
+
     parser.add_argument('--interval', '-itv', type=int, default=1)
     parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
                         help='Percent of the data that is used as validation (0-100)')
