@@ -10,7 +10,7 @@ def png_to_stl(png_folder, stl_filename):
     # Load PNG files and stack them into a 3D volume
     images = []
     png_files = sorted([os.path.join(png_folder, f) for f in os.listdir(png_folder) if f.endswith('.png')],
-                         key=lambda x: int(re.findall(r'\d+', x)[0]))
+                   key=lambda x: int(re.findall(r'axial_(\d+)', os.path.basename(x))[0]))
     for filename in png_files:
         if filename.endswith('.png'):
             img = Image.open(os.path.join(png_folder, filename)).convert('L')
