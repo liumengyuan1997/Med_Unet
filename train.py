@@ -24,8 +24,8 @@ from utils.utils import get_training_params, generateLossPlot
 from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
-from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
-from albumentations.pytorch import ToTensorV2
+# from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
+# from albumentations.pytorch import ToTensorV2
 
 
 
@@ -52,13 +52,13 @@ def train_model(
         gradient_clipping: float = 1.0,
 ):
     
-    transform = Compose([
-        # transforms.RandomHorizontalFlip(),
-        # transforms.RandomVerticalFlip(),
-        # transforms.RandomRotation(90),
-        HorizontalFlip(0.5),
-        # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
-    ])
+    # transform = Compose([
+    #     # transforms.RandomHorizontalFlip(),
+    #     # transforms.RandomVerticalFlip(),
+    #     # transforms.RandomRotation(90),
+    #     HorizontalFlip(0.5),
+    #     # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
+    # ])
 
     # 1. Create dataset
     dataset = BasicDataset(
