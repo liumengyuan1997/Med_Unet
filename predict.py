@@ -12,6 +12,8 @@ import segmentation_models_pytorch as sm
 from utils.data_loading import BasicDataset
 from unet import UNet
 from utils.utils import plot_img_and_mask, get_training_params
+from post_processing import process_and_refine_prediction  # Import the post-processing function
+
 
 def predict_img(net,
                 full_img,
@@ -132,13 +134,20 @@ if __name__ == '__main__':
                            **predict_params,
                            out_threshold=args.mask_threshold,
                            device=device)
+        
+        post_processed_mask = process_and_refine_prediction(mask,
+                                                    threshold=args.mask_threshold,
+                                                    min_size=500,  # Modify based on your application
+                                                    kernel_size=3)
+
 
         if not args.no_save:
             out_filename = out_files[i]
-            result = mask_to_image(mask, mask_values)
+            result = mask_to_image(post_processed_mask, mask_values)  # Save post-processed mask
             result.save(out_filename)
             logging.info(f'Mask saved to {out_filename}')
 
         if args.viz:
             logging.info(f'Visualizing results for image {filename}, close to continue...')
-            plot_img_and_mask(img, mask)
+            plot_img_and_mask(img, post_processed_mask)  # Visualize post-processed mask
+
