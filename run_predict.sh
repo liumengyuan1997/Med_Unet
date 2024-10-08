@@ -19,7 +19,7 @@ for input_file in "$input_folder"/*.png; do
     echo "Processing: $input_file -> $output_file"
     python predict.py -m "$model_path" -i "$input_file" -o "$output_file" -s 1.0
 
-    if [ $? -ne 0]; then
+    if [ $? -ne 0 ]; then
         echo "Error processing $input_file, stopping the script."
         exit 1
     fi
