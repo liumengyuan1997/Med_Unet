@@ -1,11 +1,32 @@
+# Python bytecode and cache files
 *.pyc
-data/
 __pycache__/
+
+# Dataset and model checkpoints
+data/
 checkpoints/
 *.pth
+
+# Image files
 *.jpg
 *.png
+
+# Virtual environments
 venv/
+
+# IDE specific directories
 .idea/
+
+# Weights & Biases files
 wandb/
+
+# Text files
 *.txt
+
+# Virtual environment
+.venv/
+venv/
+env/
+*.env
+*.venv
+*.virtualenv
