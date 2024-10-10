@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -10,9 +11,24 @@ from torchvision import transforms
 import segmentation_models_pytorch as sm
 
 from utils.data_loading import BasicDataset
-from unet import UNet
 from utils.utils import plot_img_and_mask, get_training_params
 from post_processing import process_and_refine_prediction  # Import the post-processing function
+
+VALID_EXTENSIONS = ['.png', '.jpg', '.jpeg']
+
+def is_image_file(filename):
+    ext = os.path.splitext(filename)[1].lower()
+    return ext in VALID_EXTENSIONS
+
+def gather_image_files(input_path):
+    """Gather all valid image files from a directory."""
+    if os.path.isfile(input_path) and is_image_file(input_path):
+        return [input_path]
+    elif os.path.isdir(input_path):
+        # Gather all valid image files within the directory
+        return [os.path.join(input_path, f) for f in os.listdir(input_path) if is_image_file(f)]
+    else:
+        raise ValueError(f"Input path {input_path} is not a valid file or directory containing images.")
 
 
 def predict_img(net,
@@ -46,11 +62,11 @@ def predict_img(net,
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='Predict masks from input images')
+    parser = argparse.ArgumentParser(description='Predict masks from input images or folder')
     parser.add_argument('--model', '-m', default='MODEL.pth', metavar='FILE',
                         help='Specify the file in which the model is stored')
-    parser.add_argument('--input', '-i', metavar='INPUT', nargs='+', help='Filenames of input images', required=True)
-    parser.add_argument('--output', '-o', metavar='OUTPUT', nargs='+', help='Filenames of output images')
+    parser.add_argument('--input', '-i', metavar='INPUT', help='Filename of input image or directory', required=True)
+    parser.add_argument('--output', '-o', metavar='OUTPUT', help='Directory to save output masks', required=True)
     parser.add_argument('--viz', '-v', action='store_true',
                         help='Visualize the images as they are processed')
     parser.add_argument('--no-save', '-n', action='store_true', help='Do not save the output masks')
@@ -61,22 +77,10 @@ def get_args():
     group.add_argument('--scale', '-s', type=float, help='Downscaling factor of the images')
     group.add_argument('--size', '-sz', nargs=2, type=int, metavar=('WIDTH', 'HEIGHT'), help='Width and Height of the images')
 
-    # old version
-    # parser.add_argument('--scale', '-s', type=float, default=1.0,
-    #                     help='Scale factor for the input images')
-    # parser.add_argument('--imgW', '-iw', type=int, default=224)
-    # parser.add_argument('--imgH', '-ih', type=int, default=224)
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
     
     return parser.parse_args()
-
-
-def get_output_filenames(args):
-    def _generate_name(fn):
-        return f'{os.path.splitext(fn)[0]}_OUT.png'
-
-    return args.output or list(map(_generate_name, args.input))
 
 
 def mask_to_image(mask: np.ndarray, mask_values):
@@ -100,8 +104,12 @@ if __name__ == '__main__':
     args = get_args()
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    in_files = args.input
-    out_files = get_output_filenames(args)
+    # Gather all input files
+    in_files = gather_image_files(args.input)
+
+    # Ensure output is a directory
+    output_dir = Path(args.output)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # none resnet34 version:
     # net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
@@ -140,9 +148,8 @@ if __name__ == '__main__':
                                                     min_size=500,  # Modify based on your application
                                                     kernel_size=3)
 
-
         if not args.no_save:
-            out_filename = out_files[i]
+            out_filename = output_dir / f'{Path(filename).stem}_OUT.png'
             result = mask_to_image(post_processed_mask, mask_values)  # Save post-processed mask
             result.save(out_filename)
             logging.info(f'Mask saved to {out_filename}')
@@ -150,4 +157,3 @@ if __name__ == '__main__':
         if args.viz:
             logging.info(f'Visualizing results for image {filename}, close to continue...')
             plot_img_and_mask(img, post_processed_mask)  # Visualize post-processed mask
-
