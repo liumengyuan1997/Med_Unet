@@ -13,6 +13,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 import torch.nn.functional as F
 import os
+import re
 
 def load_image(filename):
     ext = splitext(filename)[1]
@@ -23,10 +24,13 @@ def load_image(filename):
     else:
         return Image.open(filename)
 
-
 def unique_mask_values(idx, mask_dir, mask_suffix):
-    mask_file = list(mask_dir.glob(idx + mask_suffix + '.*'))[0]
-    mask = np.asarray(load_image(mask_file))
+    # Adjust the pattern based on the actual file naming
+    mask_file = list(mask_dir.glob(idx + '*' + mask_suffix + '.*'))
+    if not mask_file:
+        raise FileNotFoundError(f"No mask file found for ID {idx} in {mask_dir}")
+    
+    mask = np.asarray(load_image(mask_file[0]))
     if mask.ndim == 2:
         return np.unique(mask)
     elif mask.ndim == 3:
@@ -34,7 +38,6 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
         return np.unique(mask, axis=0)
     else:
         raise ValueError(f'Loaded masks should have 2 or 3 dimensions, found {mask.ndim}')
-
 
 class BasicDataset(Dataset):
     def __init__(self, images_dir: str, mask_dir: str, scale: float=None, newW: int=None, newH: int=None, interval: int=1, mask_suffix: str = '', transform = None):
