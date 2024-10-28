@@ -2,7 +2,7 @@ import numpy as np
 from scipy.ndimage import label, binary_fill_holes, binary_dilation, binary_erosion
 from skimage.morphology import disk
 
-def post_process_prediction(mask_pred, threshold=0.5, min_size=3):
+def post_process_prediction(mask_pred, threshold=0.5, min_size=30):
     """
     Post-process the predicted mask.
     Apply thresholding, remove small objects, and return the refined mask.
@@ -30,7 +30,7 @@ def post_process_prediction(mask_pred, threshold=0.5, min_size=3):
 
     return processed_mask
 
-def process_and_refine_prediction(mask, threshold=0.5, min_size=3, dilation_iterations=2, erosion_iterations=1, kernel_size=2):
+def process_and_refine_prediction(mask, threshold=0.5, min_size=30, dilation_iterations=3, erosion_iterations=3, kernel_size=2):
     """
     Refine the mask using thresholding, size filtering, morphological operations (dilation, erosion).
     """
@@ -41,16 +41,17 @@ def process_and_refine_prediction(mask, threshold=0.5, min_size=3, dilation_iter
     # Fill small enclosed holes within the mask
     filled_mask = binary_fill_holes(processed_mask).astype(np.uint8)
 
-    # Step 3: Perform morphological dilation followed by erosion
-    # Create a structuring element (disk-shaped kernel) for dilation and erosion
+    # # Step 3: Perform morphological dilation followed by erosion
+    # # Create a structuring element (disk-shaped kernel) for dilation and erosion
     struct_elem = disk(kernel_size)
 
-    # Apply dilation to the mask to fill small gaps, multiple iterations for better coverage
+    # # Apply dilation to the mask to fill small gaps, multiple iterations for better coverage
     dilated_mask = filled_mask
     for _ in range(dilation_iterations):
+
         dilated_mask = binary_dilation(dilated_mask, structure=struct_elem)
 
-    # Apply erosion to the mask to remove small noise after dilation, fewer iterations for finer control
+    # # Apply erosion to the mask to remove small noise after dilation, fewer iterations for finer control
     eroded_mask = dilated_mask
     for _ in range(erosion_iterations):
         eroded_mask = binary_erosion(eroded_mask, structure=struct_elem)

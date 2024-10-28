@@ -143,10 +143,7 @@ if __name__ == '__main__':
                            out_threshold=args.mask_threshold,
                            device=device)
         
-        post_processed_mask = process_and_refine_prediction(mask,
-                                                    threshold=args.mask_threshold,
-                                                    min_size=500,  # Modify based on your application
-                                                    kernel_size=3)
+        post_processed_mask = process_and_refine_prediction(mask,threshold=args.mask_threshold)
 
         if not args.no_save:
             out_filename = output_dir / f'{Path(filename).stem}_OUT.png'

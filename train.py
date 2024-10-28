@@ -29,8 +29,8 @@ from albumentations.pytorch import ToTensorV2
 
 
 
-dir_img = Path('/home/keith/Downloads/NU Works/Research/Data/01S1_no_empty_mask/original/train')
-dir_mask = Path('/home/keith/Downloads/NU Works/Research/Data/01S1_no_empty_mask/mask/train')
+dir_img = Path('/home/keith/Downloads/NU Works/Research/Med_Unet/data/01s1_original/imgs/axial')
+dir_mask = Path('/home/keith/Downloads/NU Works/Research/Med_Unet/data/01s1_original/masks/axial')
 dir_checkpoint = Path('./checkpoints/')
 
 
