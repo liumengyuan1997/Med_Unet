@@ -10,6 +10,7 @@ checkpoints/
 # Image files
 *.jpg
 *.png
+*.stl
 
 # Virtual environments
 venv/
@@ -22,6 +23,7 @@ wandb/
 
 # Text files
 *.txt
+*.json
 
 # Virtual environment
 .venv/
