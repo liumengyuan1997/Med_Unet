@@ -12,7 +12,10 @@ from pathlib import Path
 from torch.utils.data import Dataset
 from tqdm import tqdm
 import torch.nn.functional as F
+from torchvision import transforms
 import os
+
+CROP_SIZE = 224
 
 def load_image(filename):
     ext = splitext(filename)[1]
@@ -105,6 +108,9 @@ class BasicDataset(Dataset):
             
             mask = torch.from_numpy(mask)
             mask = F.pad(mask, padding, mode='constant', value=0)
+            
+            center_crop = transforms.CenterCrop(CROP_SIZE)
+            mask = center_crop(mask.unsqueeze(0)).squeeze(0)
 
             return mask.numpy()
 
@@ -118,6 +124,10 @@ class BasicDataset(Dataset):
                 img = img / 255.0
             img = torch.from_numpy(np.copy(img)).float()
             img = F.pad(img, padding, mode='constant', value=0)
+
+            center_crop = transforms.CenterCrop(CROP_SIZE)
+            img = center_crop(img.unsqueeze(0)).squeeze(0)
+            img = transforms.Normalize([0.485, 0.456, 0.406], [.229, 0.224, 0.225])(img)
 
             return img.numpy()
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 import segmentation_models_pytorch as sm
-import monai
+# import monai
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -24,14 +24,14 @@ from utils.utils import get_training_params, generateLossPlot
 from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
-from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
-from albumentations.pytorch import ToTensorV2
+# from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
+# from albumentations.pytorch import ToTensorV2
 
 
 
 dir_img = Path('./data/01s1_original/imgs/axial')
 dir_mask = Path('./data/01s1_original/masks/axial')
-dir_checkpoint = Path('./checkpoints/')
+dir_checkpoint = Path('./checkpoints/axial1')
 
 
 def train_model(
@@ -52,13 +52,13 @@ def train_model(
         gradient_clipping: float = 1.0,
 ):
     
-    transform = Compose([
-        # transforms.RandomHorizontalFlip(),
-        # transforms.RandomVerticalFlip(),
-        # transforms.RandomRotation(90),
-        HorizontalFlip(0.5),
-        # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
-    ])
+    # transform = Compose([
+    #     # transforms.RandomHorizontalFlip(),
+    #     # transforms.RandomVerticalFlip(),
+    #     # transforms.RandomRotation(90),
+    #     HorizontalFlip(0.5),
+    #     # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
+    # ])
 
     # 1. Create dataset
     dataset = BasicDataset(
@@ -199,13 +199,32 @@ def train_model(
             state_dict['mask_values'] = dataset.mask_values
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
+        
+        # --------------------------------------code for OXXN model--------------------------------------------
+        # # Define the example input tensor for export
+        #     example_input = torch.randn(1, 3, 576, 160).to('cuda')  # Adjust dimensions based on your model input size
+
+        #     # Export the model to ONNX
+        #     onnx_file_path = str(dir_checkpoint / f'model_epoch{epoch}.onnx')
+        #     torch.onnx.export(
+        #         model,                             # The model to be exported
+        #         example_input,                     # Example input to trace the model
+        #         onnx_file_path,                    # The file path for the ONNX model
+        #         export_params=True,                # Store the trained parameter weights
+        #         opset_version=11,                  # The ONNX version to export to (adjust as needed)
+        #         do_constant_folding=True,          # Optimize constant folding for the graph
+        #         dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}  # Make the model batch size flexible
+        #     )
+
+        #     logging.info(f'ONNX model saved as {onnx_file_path}!')
+    # -------------------------------------end----------------------------------------------------------------------
 
     # save final dice score to file Dice_Scores_Memo_optimum.txt
     with open("Dice_Scores_Memo_optimum.txt", "a") as file:
         file.write(f"{val_score}\n")
 
-    #  print train_losses and val_losses
-    generateLossPlot(epochs, train_losses, val_losses)
+    # #  print train_losses and val_losses
+    # generateLossPlot(epochs, train_losses, val_losses)
 
 
 def get_args():
@@ -245,7 +264,7 @@ if __name__ == '__main__':
     model = sm.Unet('resnet50',
                     encoder_weights='imagenet', 
                     classes=args.classes,
-                    activation='softmax')
+                    activation='sigmoid')
     model.n_channels = 3
     model.n_classes = args.classes
     model.bilinear = args.bilinear

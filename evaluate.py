@@ -8,7 +8,7 @@ from utils.hausdorff import HausdorffDTLoss
 # from utils.boundary_loss import BoundaryLoss
 import segmentation_models_pytorch as sm
 from utils.boundary_loss import ABL
-import monai
+# import monai
 from utils.utils import compute_distance_map
 
 @torch.inference_mode()
