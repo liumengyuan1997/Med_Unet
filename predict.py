@@ -12,6 +12,7 @@ import segmentation_models_pytorch as sm
 from utils.data_loading import BasicDataset
 from unet import UNet
 from utils.utils import plot_img_and_mask, get_training_params
+from archs import UKAN
 
 def predict_img(net,
                 full_img,
@@ -34,7 +35,7 @@ def predict_img(net,
 
     with torch.no_grad():
         output = net(img).cpu()
-        output = F.interpolate(output, (full_img.size[1], full_img.size[0]), mode='bilinear')
+        # output = F.interpolate(output, (full_img.size[1], full_img.size[0]), mode='bilinear')
         if net.n_classes > 1:
             mask = output.argmax(dim=1)
         else:
@@ -42,6 +43,42 @@ def predict_img(net,
 
     return mask[0].long().squeeze().numpy()
 
+def restore_mask_to_original_size(cropped_mask,
+                                  original_size,
+                                  crop_size,
+                                  img_scale=None,
+                                  imgW=None,
+                                  imgH=None):
+    if img_scale:
+        w, h = img.size
+        newW, newH = int(img_scale * w), int(img_scale * h)
+    else:
+        newW, newH = imgW, imgH
+    padding = BasicDataset.generatePadding(newW, newH)
+    orig_w, orig_h = original_size
+    pad_left, pad_right, pad_top, pad_bottom = padding
+    restored_mask = np.zeros((max(orig_h, crop_size), max(orig_w, crop_size)), dtype=cropped_mask.dtype)
+    if orig_w > crop_size:
+        start_x = (orig_w + pad_left + pad_right - crop_size) // 2
+        end_x = start_x + cropped_mask.shape[1]
+    else:
+        start_x = 0
+        end_x = crop_size
+
+    if orig_h > crop_size:
+        start_y = (orig_h + pad_top + pad_bottom - crop_size) // 2
+        end_y = start_y + cropped_mask.shape[0]
+    else:
+        start_y = 0
+        end_y = crop_size
+
+    restored_mask[start_y:end_y, start_x:end_x] = cropped_mask
+
+    restored_mask = torch.from_numpy(restored_mask)
+    center_crop = transforms.CenterCrop((orig_h, orig_w))
+    restored_mask = center_crop(restored_mask.unsqueeze(0)).squeeze(0)
+
+    return restored_mask.numpy()
 
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images')
@@ -103,12 +140,17 @@ if __name__ == '__main__':
 
     # none resnet34 version:
     # net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-    net = sm.Unet('resnet50', 
-                  encoder_weights='imagenet', 
-                  classes=args.classes)
-    net.n_channels = 3
-    net.n_classes = args.classes
-    net.bilinear = args.bilinear
+    
+    # net = sm.Unet('resnet50', 
+    #               encoder_weights='imagenet', 
+    #               classes=args.classes)
+    # net.n_channels = 3
+    # net.n_classes = args.classes
+    # net.bilinear = args.bilinear
+
+    net = UKAN(num_classes=args.classes)
+
+    net = net.to(memory_format=torch.channels_last)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Loading model {args.model}')
@@ -132,6 +174,8 @@ if __name__ == '__main__':
                            **predict_params,
                            out_threshold=args.mask_threshold,
                            device=device)
+        
+        mask = restore_mask_to_original_size(mask, img.size, 224, **predict_params)
 
         if not args.no_save:
             out_filename = out_files[i]

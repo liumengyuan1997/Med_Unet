@@ -24,14 +24,16 @@ from utils.utils import get_training_params, generateLossPlot
 from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
+from archs import UKAN
+
 # from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
 # from albumentations.pytorch import ToTensorV2
 
 
 
-dir_img = Path('./data/01s1_original/imgs/axial')
-dir_mask = Path('./data/01s1_original/masks/axial')
-dir_checkpoint = Path('./checkpoints/axial1')
+dir_img = Path('./data/only_s1/original_only_s1')
+dir_mask = Path('./data/only_s1/mask_only_s1')
+dir_checkpoint = Path('./checkpoints/bigdata')
 
 
 def train_model(
@@ -223,8 +225,8 @@ def train_model(
     with open("Dice_Scores_Memo_optimum.txt", "a") as file:
         file.write(f"{val_score}\n")
 
-    # #  print train_losses and val_losses
-    # generateLossPlot(epochs, train_losses, val_losses)
+    #  print train_losses and val_losses
+    generateLossPlot(epochs, train_losses, val_losses)
 
 
 def get_args():
@@ -261,6 +263,7 @@ if __name__ == '__main__':
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
     # model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+
     model = sm.Unet('resnet50',
                     encoder_weights='imagenet', 
                     classes=args.classes,
@@ -269,7 +272,9 @@ if __name__ == '__main__':
     model.n_classes = args.classes
     model.bilinear = args.bilinear
 
-    model = model.to(memory_format=torch.channels_last)
+    # model = UKAN(num_classes=args.classes)
+
+    # model = model.to(memory_format=torch.channels_last)
 
     logging.info(f'Network:\n'
                  f'\t{model.n_channels} input channels\n'
