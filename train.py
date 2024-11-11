@@ -201,25 +201,6 @@ def train_model(
             state_dict['mask_values'] = dataset.mask_values
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
-        
-        # --------------------------------------code for OXXN model--------------------------------------------
-        # # Define the example input tensor for export
-        #     example_input = torch.randn(1, 3, 576, 160).to('cuda')  # Adjust dimensions based on your model input size
-
-        #     # Export the model to ONNX
-        #     onnx_file_path = str(dir_checkpoint / f'model_epoch{epoch}.onnx')
-        #     torch.onnx.export(
-        #         model,                             # The model to be exported
-        #         example_input,                     # Example input to trace the model
-        #         onnx_file_path,                    # The file path for the ONNX model
-        #         export_params=True,                # Store the trained parameter weights
-        #         opset_version=11,                  # The ONNX version to export to (adjust as needed)
-        #         do_constant_folding=True,          # Optimize constant folding for the graph
-        #         dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}  # Make the model batch size flexible
-        #     )
-
-        #     logging.info(f'ONNX model saved as {onnx_file_path}!')
-    # -------------------------------------end----------------------------------------------------------------------
 
     # save final dice score to file Dice_Scores_Memo_optimum.txt
     with open("Dice_Scores_Memo_optimum.txt", "a") as file:
