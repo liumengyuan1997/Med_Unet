@@ -125,6 +125,7 @@ if __name__ == '__main__':
     # none resnet34 version:
     # net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     
+    # Resnet50 model
     # net = sm.Unet('resnet50', 
     #               encoder_weights='imagenet', 
     #               classes=args.classes)
@@ -132,6 +133,7 @@ if __name__ == '__main__':
     # net.n_classes = args.classes
     # net.bilinear = args.bilinear
 
+    # KAN model
     net = UKAN(num_classes=args.classes)
 
     net = net.to(memory_format=torch.channels_last)

@@ -245,6 +245,7 @@ if __name__ == '__main__':
     # n_classes is the number of probabilities you want to get per pixel
     # model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
 
+    # Resnet50 model
     # model = sm.Unet('resnet50',
     #                 encoder_weights='imagenet', 
     #                 classes=args.classes,
@@ -253,6 +254,7 @@ if __name__ == '__main__':
     # model.n_classes = args.classes
     # model.bilinear = args.bilinear
 
+    # KAN model
     model = UKAN(num_classes=args.classes)
 
     model = model.to(memory_format=torch.channels_last)
