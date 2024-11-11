@@ -13,6 +13,7 @@ from utils.data_loading import BasicDataset
 from unet import UNet
 from utils.utils import plot_img_and_mask, get_training_params
 from archs import UKAN
+import cv2
 
 def predict_img(net,
                 full_img,
@@ -49,32 +50,15 @@ def restore_mask_to_original_size(cropped_mask,
                                   img_scale=None,
                                   imgW=None,
                                   imgH=None):
-    if img_scale:
-        w, h = img.size
-        newW, newH = int(img_scale * w), int(img_scale * h)
-    else:
-        newW, newH = imgW, imgH
-    padding = BasicDataset.generatePadding(newW, newH)
+
+    original_width = int(cropped_mask.shape[1] / img_scale)
+    original_height = int(cropped_mask.shape[0] / img_scale)
+
+    resized_mask = cv2.resize(cropped_mask, (original_width, original_height), interpolation=cv2.INTER_NEAREST)
+
     orig_w, orig_h = original_size
-    pad_left, pad_right, pad_top, pad_bottom = padding
-    restored_mask = np.zeros((max(orig_h, crop_size), max(orig_w, crop_size)), dtype=cropped_mask.dtype)
-    if orig_w > crop_size:
-        start_x = (orig_w + pad_left + pad_right - crop_size) // 2
-        end_x = start_x + cropped_mask.shape[1]
-    else:
-        start_x = 0
-        end_x = crop_size
 
-    if orig_h > crop_size:
-        start_y = (orig_h + pad_top + pad_bottom - crop_size) // 2
-        end_y = start_y + cropped_mask.shape[0]
-    else:
-        start_y = 0
-        end_y = crop_size
-
-    restored_mask[start_y:end_y, start_x:end_x] = cropped_mask
-
-    restored_mask = torch.from_numpy(restored_mask)
+    restored_mask = torch.from_numpy(resized_mask)
     center_crop = transforms.CenterCrop((orig_h, orig_w))
     restored_mask = center_crop(restored_mask.unsqueeze(0)).squeeze(0)
 

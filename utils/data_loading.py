@@ -79,16 +79,16 @@ class BasicDataset(Dataset):
     def __len__(self):
         return len(self.ids)
     
-    @staticmethod
-    def generatePadding(newW, newH):
-        pad_w = (32 - newW % 32) % 32
-        pad_h = (32 - newH % 32) % 32
-        pad_left = pad_w // 2
-        pad_right = pad_w - pad_left
-        pad_top = pad_h // 2
-        pad_bottom = pad_h - pad_top
-        padding = (pad_left, pad_right, pad_top, pad_bottom)
-        return padding
+    # @staticmethod
+    # def generatePadding(newW, newH):
+    #     pad_w = (32 - newW % 32) % 32
+    #     pad_h = (32 - newH % 32) % 32
+    #     pad_left = pad_w // 2
+    #     pad_right = pad_w - pad_left
+    #     pad_top = pad_h // 2
+    #     pad_bottom = pad_h - pad_top
+    #     padding = (pad_left, pad_right, pad_top, pad_bottom)
+    #     return padding
 
     @staticmethod
     def preprocess(mask_values, pil_img, is_mask, scale: float=None, newW: int=None, newH: int=None):
@@ -100,16 +100,16 @@ class BasicDataset(Dataset):
         pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
         img = np.asarray(pil_img)
 
-        # # Compute padding to make dimensions divisible by 32
-        # pad_w = (32 - newW % 32) % 32
-        # pad_h = (32 - newH % 32) % 32
-        # pad_left = pad_w // 2
-        # pad_right = pad_w - pad_left
-        # pad_top = pad_h // 2
-        # pad_bottom = pad_h - pad_top
-        # padding = (pad_left, pad_right, pad_top, pad_bottom)
+        # Compute padding to make dimensions divisible by 32
+        pad_w = (32 - newW % 32) % 32
+        pad_h = (32 - newH % 32) % 32
+        pad_left = pad_w // 2
+        pad_right = pad_w - pad_left
+        pad_top = pad_h // 2
+        pad_bottom = pad_h - pad_top
+        padding = (pad_left, pad_right, pad_top, pad_bottom)
 
-        padding = BasicDataset.generatePadding(newW, newH)
+        # padding = BasicDataset.generatePadding(newW, newH)
 
         if is_mask:
             mask = np.zeros((newH, newW), dtype=np.int64)
