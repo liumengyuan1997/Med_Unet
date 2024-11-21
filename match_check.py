@@ -72,8 +72,8 @@ def match_check(original_dir, mask_dir, delete_unmatched=False):
             delete_files(mask_dir, unmatched_masks)
 
 if __name__ == '__main__':
-    original_dir = '/home/keith/Downloads/NU Works/Research/Data/only_s1/original_only_s1'  # Your actual original images folder path
-    mask_dir = '/home/keith/Downloads/NU Works/Research/Data/only_s1/mask_only_s1'  # Your actual masks folder path
+    original_dir = '/home/keith/Downloads/NU Works/Research/Data/only_s1_half/original_only_s1'  # Your actual original images folder path
+    mask_dir = '/home/keith/Downloads/NU Works/Research/Data/only_s1_half/mask_only_s1'  # Your actual masks folder path
     delete_unmatched = True  # Set to True to enable deletion of unmatched files
 
     # Rename the files first

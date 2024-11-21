@@ -29,16 +29,16 @@ from albumentations.pytorch import ToTensorV2
 
 
 
-dir_img = Path('/home/keith/Downloads/NU Works/Research/Med_Unet/data/01s1_original/imgs/axial')
-dir_mask = Path('/home/keith/Downloads/NU Works/Research/Med_Unet/data/01s1_original/masks/axial')
+dir_img = Path('/home/keith/Downloads/NU Works/Research/Data/only_s1_half/original_only_s1')
+dir_mask = Path('/home/keith/Downloads/NU Works/Research/Data/only_s1_half/mask_only_s1')
 dir_checkpoint = Path('./checkpoints/')
 
 
 def train_model(
         model,
         device,
-        epochs: int = 15,
-        batch_size: int = 1,
+        epochs: int = 15, # need to change to 100
+        batch_size: int = 32,
         learning_rate: float = 1e-6,
         val_percent: float = 0.1,
         save_checkpoint: bool = True,
@@ -211,8 +211,8 @@ def train_model(
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=15, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
-    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
+    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
 
