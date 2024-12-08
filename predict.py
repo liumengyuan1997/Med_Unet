@@ -70,7 +70,7 @@ def get_args():
     parser.add_argument('--viz', '-v', action='store_true',
                         help='Visualize the images as they are processed')
     parser.add_argument('--no-save', '-n', action='store_true', help='Do not save the output masks')
-    parser.add_argument('--mask-threshold', '-t', type=float, default=0.5,
+    parser.add_argument('--mask-threshold', '-t', type=float, default=0.9,
                         help='Minimum probability value to consider a mask pixel white')
     # scale and img size options
     group = parser.add_mutually_exclusive_group()
@@ -136,6 +136,8 @@ if __name__ == '__main__':
     for i, filename in enumerate(in_files):
         logging.info(f'Predicting image {filename} ...')
         img = Image.open(filename)
+        if img.mode == "RGBA":
+            img = img.convert("RGB")
 
         mask = predict_img(net=net,
                            full_img=img,
@@ -143,14 +145,17 @@ if __name__ == '__main__':
                            out_threshold=args.mask_threshold,
                            device=device)
         
-        post_processed_mask = process_and_refine_prediction(mask,threshold=args.mask_threshold)
+        #post_processed_mask = process_and_refine_prediction(mask,threshold=args.mask_threshold)
 
         if not args.no_save:
             out_filename = output_dir / f'{Path(filename).stem}_OUT.png'
-            result = mask_to_image(post_processed_mask, mask_values)  # Save post-processed mask
+            result = mask_to_image(mask, mask_values)  # Save post-processed mask
             result.save(out_filename)
             logging.info(f'Mask saved to {out_filename}')
 
         if args.viz:
             logging.info(f'Visualizing results for image {filename}, close to continue...')
-            plot_img_and_mask(img, post_processed_mask)  # Visualize post-processed mask
+            plot_img_and_mask(img, mask)  # Visualize post-processed mask
+
+
+#/usr/bin/python3 "/home/keith/Downloads/NU Works/Research/Med_Unet/predict.py" --model "/home/keith/Downloads/NU Works/Research/Med_Unet/checkpoints//record/checkpoint_epoch01_7_9318.pth" --input "/home/keith/Downloads/NU Works/Research/Data/Poster/unified_MRI_with_mask/TD09_S1/TD09_S1_MRI_axial_origin" --output "/home/keith/Downloads/NU Works/Research/Data/Poster/09S1"

@@ -131,6 +131,6 @@ def anisotropic_diffusion(volume, niter=5, kappa=50, gamma=0.1):
     return volume
 
 # Example usage:
-png_folder = '/home/keith/Downloads/NU Works/Research/Data/Poster/09S1'
+png_folder = '/home/keith/Downloads/NU Works/Research/Data/Poster/09S1 old'
 stl_filename = 'output_model.stl'
 png_to_stl(png_folder, stl_filename, smoothing_method='curvature')  # Choose smoothing method: 'curvature', 'bilateral', or 'anisotropic'

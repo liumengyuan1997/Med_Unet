@@ -68,7 +68,12 @@ def compute_distance_map(masks):
     return distance_maps_tensor
 
 def generateLossPlot(epochs, train_loss_ls, val_loss_ls):
+    # Convert GPU tensors to CPU and detach if necessary
+    train_loss_ls = [loss.cpu().item() if isinstance(loss, torch.Tensor) else loss for loss in train_loss_ls]
+    val_loss_ls = [loss.cpu().item() if isinstance(loss, torch.Tensor) else loss for loss in val_loss_ls]
+    
     epochs_ls = list(range(1, epochs + 1))
+    
     plt.figure()
     plt.plot(epochs_ls, train_loss_ls, 'b-', label='Training Loss')
     plt.plot(epochs_ls, val_loss_ls, 'r-', label='Validation Loss')
@@ -77,3 +82,4 @@ def generateLossPlot(epochs, train_loss_ls, val_loss_ls):
     plt.title('Training and Validation Loss')
     plt.legend()
     plt.show()
+

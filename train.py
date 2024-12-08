@@ -29,35 +29,34 @@ from albumentations.pytorch import ToTensorV2
 
 
 
-dir_img = Path('/home/keith/Downloads/NU Works/Research/Data/only_s1_half/original_only_s1')
-dir_mask = Path('/home/keith/Downloads/NU Works/Research/Data/only_s1_half/mask_only_s1')
+dir_img = Path('/home/keith/Downloads/NU Works/Research/Data/Train/train_and_validation_v2/origin_upload')
+dir_mask = Path('/home/keith/Downloads/NU Works/Research/Data/Train/train_and_validation_v2/mask_upload')
 dir_checkpoint = Path('./checkpoints/')
 
 
 def train_model(
         model,
         device,
-        epochs: int = 15, # need to change to 100
-        batch_size: int = 32,
-        learning_rate: float = 1e-6,
+        epochs: int = 15,
+        batch_size: int = 1,
+        learning_rate: float = 1e-4,
         val_percent: float = 0.1,
         save_checkpoint: bool = True,
         img_scale: float = None,
         imgW: int = None,
         imgH: int = None,
         interval: int = 1,
-        amp: bool = False,
+        amp: bool = True,
         weight_decay: float = 1e-8,
         momentum: float = 0.999,
         gradient_clipping: float = 1.0,
 ):
+    # Initialize variables to track the best validation score and corresponding epoch
+    best_val_score = float('-inf')  # Negative infinity as initial value
+    best_epoch = 0
     
     transform = Compose([
-        # transforms.RandomHorizontalFlip(),
-        # transforms.RandomVerticalFlip(),
-        # transforms.RandomRotation(90),
-        HorizontalFlip(0.5),
-        # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
+        #HorizontalFlip(0.5),
     ])
 
     # 1. Create dataset
@@ -186,13 +185,28 @@ def train_model(
                             if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        val_loss, val_score = evaluate(model, val_loader, device, amp)
+                        val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
 
         train_losses.append(epoch_loss)
-        val_losses.append(val_loss)
+
+        # Validation phase
+        val_score = evaluate(model, val_loader, device, amp)
+
+        # Log the Dice score
+        logging.info(f'Epoch {epoch} Validation Dice score: {val_score:.4f}')
+
+        # Update the validation losses list
+        val_losses.append(val_score)
+
+        # Update best score and epoch
+        if val_score > best_val_score:
+            best_val_score = val_score
+            best_epoch = epoch
+            logging.info(f'New best score: {best_val_score:.4f} at epoch {best_epoch}')
+
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
@@ -200,19 +214,22 @@ def train_model(
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
 
-    # save final dice score to file Dice_Scores_Memo_optimum.txt
-    with open("Dice_Scores_Memo_optimum.txt", "a") as file:
-        file.write(f"{val_score}\n")
+    # Log final Dice score and best epoch and save to file
+    logging.info(f'Best Validation Dice Score: {best_val_score:.4f} achieved at Epoch: {best_epoch}')
+    with open("Dice_Scores_Memo.txt", "a") as file:
+        file.write(f"Best Dice Score: {best_val_score:.4f} at Epoch: {best_epoch}\n")
+    
 
-    #  print train_losses and val_losses
+
+    # Generate loss plot
     generateLossPlot(epochs, train_losses, val_losses)
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=15, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
-    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
+    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
 
@@ -221,10 +238,10 @@ def get_args():
     group.add_argument('--scale', '-s', type=float, help='Downscaling factor of the images')
     group.add_argument('--size', '-sz', nargs=2, type=int, metavar=('WIDTH', 'HEIGHT'), help='Width and Height of the images')
 
-    parser.add_argument('--interval', '-itv', type=int, default=1)
-    parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
+    parser.add_argument('--interval', '-itv', type=int, default=0)
+    parser.add_argument('--validation', '-v', dest='val', type=float, default=20.0,
                         help='Percent of the data that is used as validation (0-100)')
-    parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
+    parser.add_argument('--amp', action='store_true', default=True, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
 
@@ -295,4 +312,4 @@ if __name__ == '__main__':
             val_percent=args.val / 100,
             amp=args.amp,
             **train_params  # Unpack the parameters
-        )
+        )  

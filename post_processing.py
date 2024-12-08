@@ -2,7 +2,7 @@ import numpy as np
 from scipy.ndimage import label, binary_fill_holes, binary_dilation, binary_erosion
 from skimage.morphology import disk
 
-def post_process_prediction(mask_pred, threshold=0.5, min_size=30):
+def post_process_prediction(mask_pred, threshold=0.5, min_size=100):
     """
     Post-process the predicted mask.
     Apply thresholding, remove small objects, and return the refined mask.
@@ -30,7 +30,7 @@ def post_process_prediction(mask_pred, threshold=0.5, min_size=30):
 
     return processed_mask
 
-def process_and_refine_prediction(mask, threshold=0.5, min_size=30, dilation_iterations=3, erosion_iterations=3, kernel_size=2):
+def process_and_refine_prediction(mask, threshold=0.5, min_size=100, dilation_iterations=3, erosion_iterations=3, kernel_size=2):
     """
     Refine the mask using thresholding, size filtering, morphological operations (dilation, erosion).
     """
