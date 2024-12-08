@@ -12,7 +12,7 @@ from pathlib import Path
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 import segmentation_models_pytorch as sm
-import monai
+# import monai
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -24,14 +24,14 @@ from utils.utils import get_training_params, generateLossPlot
 from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
-from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
-from albumentations.pytorch import ToTensorV2
+# from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
+# from albumentations.pytorch import ToTensorV2
 
 
 
-dir_img = Path('/home/keith/Downloads/NU Works/Research/Data/only_s1_half/original_only_s1')
-dir_mask = Path('/home/keith/Downloads/NU Works/Research/Data/only_s1_half/mask_only_s1')
-dir_checkpoint = Path('./checkpoints/')
+dir_img = Path('/home/zhangyanyu/unet/data/01s1_new/images')
+dir_mask = Path('/home/zhangyanyu/unet/data/01s1_new/masks')
+dir_checkpoint = Path('./checkpoints/oldUnet01s1')
 
 
 def train_model(
@@ -52,13 +52,13 @@ def train_model(
         gradient_clipping: float = 1.0,
 ):
     
-    transform = Compose([
-        # transforms.RandomHorizontalFlip(),
-        # transforms.RandomVerticalFlip(),
-        # transforms.RandomRotation(90),
-        HorizontalFlip(0.5),
-        # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
-    ])
+    # transform = Compose([
+    #     # transforms.RandomHorizontalFlip(),
+    #     # transforms.RandomVerticalFlip(),
+    #     # transforms.RandomRotation(90),
+    #     HorizontalFlip(0.5),
+    #     # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
+    # ])
 
     # 1. Create dataset
     dataset = BasicDataset(
@@ -211,8 +211,8 @@ def train_model(
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=15, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
-    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
+    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-6,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
 

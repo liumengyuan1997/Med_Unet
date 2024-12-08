@@ -13,7 +13,6 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 import torch.nn.functional as F
 import os
-import re
 
 def load_image(filename):
     ext = splitext(filename)[1]
