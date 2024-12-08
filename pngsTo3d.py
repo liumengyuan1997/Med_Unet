@@ -19,16 +19,24 @@ def png_to_stl(png_folder, stl_filename, last_processed_file='last_processed.jso
 
     # Load PNG files and filter based on last processed index
     print("Loading PNG files...")
+    valid_png_files = []
+    for f in os.listdir(png_folder):
+        if f.endswith('.png') and re.search(r'_origin_(\d+)_OUT', f):
+            valid_png_files.append(f)
+        else:
+            print(f"Skipping invalid filename: {f}")
+
     png_files = sorted(
-        [os.path.join(png_folder, f) for f in os.listdir(png_folder) if f.endswith('.png')],
-        key=lambda x: int(re.findall(r'axial_(\d+)', os.path.basename(x))[0])
+        [os.path.join(png_folder, f) for f in valid_png_files],
+        key=lambda x: int(re.findall(r'_origin_(\d+)_OUT', os.path.basename(x))[0])
     )
+
     images = []
     new_last_index = last_index
     for i, filename in enumerate(png_files):
-        file_index = int(re.findall(r'axial_(\d+)', os.path.basename(filename))[0])
+        file_index = int(re.findall(r'_origin_(\d+)_OUT', os.path.basename(filename))[0])
         if file_index > last_index:
-            img = Image.open(os.path.join(png_folder, filename)).convert('L')
+            img = Image.open(filename).convert('L')
             images.append(np.array(img))
             new_last_index = max(new_last_index, file_index)
         if i % 50 == 0:
@@ -123,6 +131,6 @@ def anisotropic_diffusion(volume, niter=5, kappa=50, gamma=0.1):
     return volume
 
 # Example usage:
-png_folder = '/home/keith/Downloads/NU Works/Research/Data/01S1_no_empty_mask/original/train_post4'
+png_folder = '/home/keith/Downloads/NU Works/Research/Data/Poster/09S1'
 stl_filename = 'output_model.stl'
 png_to_stl(png_folder, stl_filename, smoothing_method='curvature')  # Choose smoothing method: 'curvature', 'bilateral', or 'anisotropic'
