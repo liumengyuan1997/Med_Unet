@@ -30,5 +30,5 @@ def process_images_in_folder(folder_path):
                 print(f"Error processing {image_path}: {e}")
 
 # Example usage
-folder_path = "/home/keith/Downloads/NU Works/Research/Data/Poster/unified_MRI_with_mask/TD01_S1/TD01_S1_MRI_axial_mask"  # Replace with your folder path
+folder_path = "/home/keith/Downloads/NU Works/Research/Data/Poster/unified_MRI_with_mask/TD09_S1/TD09_S1_MRI_axial_mask"  # Replace with your folder path
 process_images_in_folder(folder_path)

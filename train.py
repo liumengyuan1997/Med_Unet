@@ -30,7 +30,7 @@ from utils.boundary_loss import ABL
 
 
 dir_img = Path('/home/keith/Downloads/NU Works/Research/Data/Train/train_and_validation_v2/origin_upload')
-dir_mask = Path('/home/keith/Downloads/NU Works/Research/Data/Train/train_and_validation_v2/mask_upload')
+dir_mask = Path('/home/keith/Downloads/NU Works/Research/Data/Train/train_and_validation_v2/mask_upload1')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -55,8 +55,8 @@ def train_model(
     best_val_score = float('-inf')  # Negative infinity as initial value
     best_epoch = 0
     
-    transform = Compose([
-        #HorizontalFlip(0.5),
+    transform = transforms.Compose([
+        # transforms.RandomHorizontalFlip(0.5),
     ])
 
     # 1. Create dataset
@@ -227,9 +227,9 @@ def train_model(
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=15, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
-    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
+    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=100, help='Number of epochs')
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=4, help='Batch size')
+    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
 

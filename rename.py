@@ -45,6 +45,6 @@ def rename_and_copy_images(source_folder, target_folder):
             print(f"Skipped: {filename} (Pattern not matched)")
 
 # Example usage:
-source_folder = "/home/keith/Downloads/NU Works/Research/Data/Poster/unified_MRI_with_mask/TD01_S1/TD01_S1_MRI_axial_mask (copy)"
-target_folder = "/home/keith/Downloads/NU Works/Research/Data/Poster/unified_MRI_with_mask/TD01_S1/TD01_S1_MRI_axial_mask"
+source_folder = "/home/keith/Downloads/NU Works/Research/Data/Poster/unified_MRI_with_mask/TD09_S1/TD09_S1_MRI_axial_mask"
+target_folder = "/home/keith/Downloads/NU Works/Research/Med_Unet/test/09S1_mask"
 rename_and_copy_images(source_folder, target_folder)
