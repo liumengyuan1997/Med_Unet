@@ -118,7 +118,7 @@ if __name__ == "__main__":
     
     # Define input folder and output folder
     input_folder = './test/09S1_images'
-    output_folder = './test/09S1__output'
+    output_folder = './test/09S1_output'
     
     # Define parameters
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
