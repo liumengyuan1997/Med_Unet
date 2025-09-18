@@ -5,11 +5,8 @@ import torch.nn as nn
 
 from utils.dice_score import multiclass_dice_coeff, dice_coeff, dice_loss
 from utils.hausdorff import HausdorffDTLoss
-# from utils.boundary_loss import BoundaryLoss
 import segmentation_models_pytorch as sm
 from utils.boundary_loss import ABL
-import monai
-from utils.utils import compute_distance_map
 
 @torch.inference_mode()
 def evaluate(net, dataloader, device, amp):

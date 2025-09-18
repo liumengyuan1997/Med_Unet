@@ -12,7 +12,6 @@ from pathlib import Path
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 import segmentation_models_pytorch as sm
-import monai
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -24,14 +23,9 @@ from utils.utils import get_training_params, generateLossPlot
 from utils.hausdorff import HausdorffDTLoss
 from utils.boundary_loss import ABL
 
-from albumentations import Compose, RandomRotate90, Flip, Normalize,HorizontalFlip
-from albumentations.pytorch import ToTensorV2
-
-
-
-dir_img = Path('./data/01s1_original/imgs/axial')
-dir_mask = Path('./data/01s1_original/masks/axial')
-dir_checkpoint = Path('./checkpoints/')
+dir_img = Path('/home/zhangyanyu/unet/data/01s1_new/images')
+dir_mask = Path('/home/zhangyanyu/unet/data/01s1_new/masks')
+dir_checkpoint = Path('./checkpoints/oldUnet01s1')
 
 
 def train_model(
@@ -51,14 +45,6 @@ def train_model(
         momentum: float = 0.999,
         gradient_clipping: float = 1.0,
 ):
-    
-    transform = Compose([
-        # transforms.RandomHorizontalFlip(),
-        # transforms.RandomVerticalFlip(),
-        # transforms.RandomRotation(90),
-        HorizontalFlip(0.5),
-        # transforms.RandomCrop((imgH, imgW)) if imgH and imgW else transforms.RandomResizedCrop(224)
-    ])
 
     # 1. Create dataset
     dataset = BasicDataset(
@@ -67,8 +53,7 @@ def train_model(
         scale=img_scale if img_scale else None,
         newW=imgW if imgW else None,
         newH=imgH if imgH else None,
-        interval=interval if interval else 1,  # default interval
-        # transform=transform
+        interval=interval if interval else 1
     )
 
     # 2. Split into train / validation partitions
